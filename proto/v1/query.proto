@@ -1,0 +1,193 @@
+// Copyright 2026 Florin Balint
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package gocrud.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "google/type/date.proto";
+import "google/type/timeofday.proto";
+import "google/type/decimal.proto";
+
+option go_package = "github.com/FlorinBalint/gocrud/proto/v1;gocrudv1";
+
+// ---------------------------------------------------------------------------
+// Scalar value
+// ---------------------------------------------------------------------------
+
+// Value holds a typed scalar used in filter conditions.
+// Types cover the full set of standard SQL scalar types:
+//
+//  SQL type(s)                    | field
+//  -------------------------------|------------------
+//  VARCHAR, CHAR, TEXT            | string_value
+//  INTEGER, BIGINT, SMALLINT      | int_value
+//  FLOAT, DOUBLE PRECISION, REAL  | double_value
+//  NUMERIC, DECIMAL               | decimal_value
+//  BOOLEAN                        | bool_value
+//  BLOB, BINARY, BYTEA            | bytes_value
+//  TIMESTAMP [WITH TIME ZONE]     | timestamp_value
+//  DATE                           | date_value
+//  TIME                           | time_value
+//  INTERVAL                       | interval_value
+message Value {
+  oneof kind {
+    string                      string_value    = 1;
+    int64                       int_value       = 2;
+    double                      double_value    = 3;
+    google.type.Decimal         decimal_value   = 4;
+    bool                        bool_value      = 5;
+    bytes                       bytes_value     = 6;
+    google.protobuf.Timestamp   timestamp_value = 7;
+    google.type.Date            date_value      = 8;
+    google.type.TimeOfDay       time_value      = 9;
+    google.protobuf.Duration    interval_value  = 10;
+  }
+}
+
+// ValueList is an ordered list of Values, used with IN / NOT_IN operators.
+message ValueList {
+  repeated Value values = 1;
+}
+
+// ---------------------------------------------------------------------------
+// Filtering (WHERE clause)
+// ---------------------------------------------------------------------------
+
+// Operator defines the comparison applied in a Condition.
+// Only operators supported across all major SQL dialects are included.
+// Dialect-specific operators (e.g. ILIKE in PostgreSQL) are intentionally
+// omitted.
+enum Operator {
+  OPERATOR_UNSPECIFIED = 0;
+  // Equality
+  EQUAL                  = 1;  // field = value
+  NOT_EQUAL              = 2;  // field != value
+  // Ordering
+  GREATER_THAN           = 3;  // field > value
+  GREATER_THAN_OR_EQUAL  = 4;  // field >= value
+  LESS_THAN              = 5;  // field < value
+  LESS_THAN_OR_EQUAL     = 6;  // field <= value
+  // Set membership
+  IN                     = 7;  // field IN (values)
+  NOT_IN                 = 8;  // field NOT IN (values)
+  // Pattern matching (case-sensitive, standard SQL)
+  LIKE                   = 9;  // field LIKE value
+  NOT_LIKE               = 10; // field NOT LIKE value
+  // Null checks (no operand required)
+  IS_NULL                = 11; // field IS NULL
+  IS_NOT_NULL            = 12; // field IS NOT NULL
+}
+
+// Condition is a single column predicate: <field> <op> [<value> | <values>].
+message Condition {
+  // Column name to test.
+  string field = 1;
+  // Comparison operator.
+  Operator op = 2;
+  // Operand — omit for IS_NULL / IS_NOT_NULL.
+  oneof operand {
+    Value     value  = 3; // =, !=, >, >=, <, <=, LIKE, NOT_LIKE
+    ValueList values = 4; // IN, NOT_IN
+  }
+}
+
+// Filter is a node in the WHERE-clause expression tree.
+// A leaf holds a single Condition; a branch combines sub-filters with AND/OR.
+message Filter {
+  oneof filter {
+    Condition       condition = 1;
+    CompositeFilter composite = 2;
+  }
+}
+
+// CompositeFilter combines two or more sub-filters with a logical operator.
+message CompositeFilter {
+  enum LogicOp {
+    LOGIC_OP_UNSPECIFIED = 0;
+    AND = 1;
+    OR  = 2;
+  }
+  LogicOp          op      = 1;
+  repeated Filter  filters = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Sorting (ORDER BY clause)
+// ---------------------------------------------------------------------------
+
+// OrderBy specifies the sort direction for a single field.
+message OrderBy {
+  enum Direction {
+    ASC  = 0; // ascending (SQL default)
+    DESC = 1;
+  }
+  string    field     = 1;
+  Direction direction = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Pagination
+// ---------------------------------------------------------------------------
+
+// Pagination controls page size and position using opaque tokens.
+// Callers should treat page_token as an opaque string; its encoding is an
+// implementation detail of the server.
+message Pagination {
+  // Maximum number of items to return. The server may return fewer.
+  // A value of 0 lets the server choose a default page size.
+  int32 page_size = 1;
+
+  // Token identifying the page to retrieve.
+  // Omit (or pass an empty string) to request the first page.
+  // Use the next_page_token / prev_page_token from a previous response to
+  // advance or retreat through the result set.
+  string page_token = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Generic list request
+// ---------------------------------------------------------------------------
+
+// ListRequest is a dialect-agnostic representation of a SQL SELECT query
+// without joins or aggregation:
+//
+//   SELECT [fields | *]
+//   FROM   <entity_table>
+//   WHERE  [filter]
+//   ORDER  BY [order_by[0]], [order_by[1]], …
+//
+// This message is intentionally entity-agnostic; the target table is
+// determined by the specific RPC that receives it.
+message ListRequest {
+  // Columns to return. Empty means "all columns" (SELECT *).
+  repeated string fields = 1;
+
+  // Root of the WHERE-clause expression tree.
+  // Absent means no filtering (all rows match).
+  Filter filter = 2;
+
+  // Sort order. Entries are applied left-to-right (primary sort first).
+  repeated OrderBy order_by = 3;
+
+  // Pagination parameters. Absent means the server returns a default first page.
+  Pagination pagination = 4;
+
+  // If true, the response will include the total number of rows matching the
+  // filter, regardless of pagination. Useful for UIs that need to display
+  // "page X of Y" or a total result count.  
+  bool include_total = 5;
+}
