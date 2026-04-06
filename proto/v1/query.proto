@@ -74,28 +74,28 @@ message ValueList {
 enum Operator {
   OPERATOR_UNSPECIFIED = 0;
   // Equality
-  EQUAL                  = 1;  // field = value
-  NOT_EQUAL              = 2;  // field != value
+  EQUAL                  = 1;  // = value
+  NOT_EQUAL              = 2;  // != value
   // Ordering
-  GREATER_THAN           = 3;  // field > value
-  GREATER_THAN_OR_EQUAL  = 4;  // field >= value
-  LESS_THAN              = 5;  // field < value
-  LESS_THAN_OR_EQUAL     = 6;  // field <= value
+  GREATER_THAN           = 3;  // > value
+  GREATER_THAN_OR_EQUAL  = 4;  // >= value
+  LESS_THAN              = 5;  // < value
+  LESS_THAN_OR_EQUAL     = 6;  // <= value
   // Set membership
-  IN                     = 7;  // field IN (values)
-  NOT_IN                 = 8;  // field NOT IN (values)
+  IN                     = 7;  // IN (values)
+  NOT_IN                 = 8;  // NOT IN (values)
   // Pattern matching (case-sensitive, standard SQL)
-  LIKE                   = 9;  // field LIKE value
-  NOT_LIKE               = 10; // field NOT LIKE value
+  LIKE                   = 9;  // LIKE value
+  NOT_LIKE               = 10; // NOT LIKE value
   // Null checks (no operand required)
-  IS_NULL                = 11; // field IS NULL
-  IS_NOT_NULL            = 12; // field IS NOT NULL
+  IS_NULL                = 11; // IS NULL
+  IS_NOT_NULL            = 12; // IS NOT NULL
 }
 
-// Condition is a single column predicate: <field> <op> [<value> | <values>].
+// Condition is a single column predicate: <column> <op> [<value> | <values>].
 message Condition {
   // Column name to test.
-  string field = 1;
+  string column = 1;
   // Comparison operator.
   Operator op = 2;
   // Operand — omit for IS_NULL / IS_NOT_NULL.
@@ -135,7 +135,7 @@ message OrderBy {
     ASC  = 0; // ascending (SQL default)
     DESC = 1;
   }
-  string    field     = 1;
+  string    column    = 1;
   Direction direction = 2;
 }
 
@@ -156,6 +156,25 @@ message Pagination {
   // Use the next_page_token / prev_page_token from a previous response to
   // advance or retreat through the result set.
   string page_token = 2;
+}
+
+// ---------------------------------------------------------------------------
+// DML value types
+// ---------------------------------------------------------------------------
+
+// ColumnUpdate pairs a column name with its new value in an UPDATE SET clause.
+// Exactly one of value or use_default must be set as the active assignment.
+message ColumnUpdate {
+  // Column name to update.
+  string column = 1;
+  oneof assignment {
+    // The new scalar value to set.
+    Value value = 2;
+    // When set, resets the column to its SQL DEFAULT (e.g. a sequence or
+    // expression default). The bool's actual value is ignored; only the
+    // presence of this case matters.
+    bool use_default = 3;
+  }
 }
 
 // ---------------------------------------------------------------------------

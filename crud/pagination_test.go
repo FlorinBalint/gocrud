@@ -24,9 +24,9 @@ import (
 // Proto builder helpers (used by TestQueryHash)
 // ---------------------------------------------------------------------------
 
-func condFilter(field string, op gocrudv1.Operator, v *gocrudv1.Value) *gocrudv1.Filter {
+func condFilter(column string, op gocrudv1.Operator, v *gocrudv1.Value) *gocrudv1.Filter {
 	return &gocrudv1.Filter{Filter: &gocrudv1.Filter_Condition{
-		Condition: &gocrudv1.Condition{Field: field, Op: op, Operand: &gocrudv1.Condition_Value{Value: v}},
+		Condition: &gocrudv1.Condition{Column: column, Op: op, Operand: &gocrudv1.Condition_Value{Value: v}},
 	}}
 }
 
@@ -44,8 +44,8 @@ func intVal(i int64) *gocrudv1.Value {
 	return &gocrudv1.Value{Kind: &gocrudv1.Value_IntValue{IntValue: i}}
 }
 
-func orderBy(field string, dir gocrudv1.OrderBy_Direction) *gocrudv1.OrderBy {
-	return &gocrudv1.OrderBy{Field: field, Direction: dir}
+func orderBy(column string, dir gocrudv1.OrderBy_Direction) *gocrudv1.OrderBy {
+	return &gocrudv1.OrderBy{Column: column, Direction: dir}
 }
 
 // ---------------------------------------------------------------------------

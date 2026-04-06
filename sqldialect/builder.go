@@ -35,7 +35,7 @@ const (
 // is built by the list service after resolving pagination, then handed to a Builder.
 type SelectQuery interface {
 	Table() string
-	Fields() []string              // nil/empty → SELECT *
+	Columns() []string             // nil/empty → SELECT *
 	Filter() *gocrudv1.Filter     // nil → no WHERE clause
 	OrderBy() []*gocrudv1.OrderBy // nil/empty → no ORDER BY
 	Limit() int32                 // rows to fetch (already includes n+1 for has-next detection)
@@ -51,6 +51,7 @@ type SelectQuery interface {
 type Builder interface {
 	BuildSelect(q SelectQuery) (sql string, args []any, err error)
 	BuildInsert(q InsertQuery) (sql string, args []any, err error)
+	BuildUpdate(q UpdateQuery) (sql string, args []any, err error)
 }
 
 // ForBackend returns a Builder for the given backend dialect.
@@ -92,10 +93,38 @@ func NewInsertQuery(table string, columns []string, values []*gocrudv1.Value) In
 	return &insertQuery{table: table, columns: columns, values: values}
 }
 
+// UpdateQuery is the fully-resolved internal representation of an UPDATE
+// handed to a Builder by the crud service.
+//
+// The sqldialect layer does not enforce a WHERE clause; that constraint is
+// the caller's responsibility (e.g. the service requiring a primary-key filter).
+type UpdateQuery interface {
+	Table() string
+	Updates() []*gocrudv1.ColumnUpdate // the SET clause; must be non-empty
+	Filter() *gocrudv1.Filter          // nil → no WHERE clause (updates all rows)
+}
+
+// updateQuery is the concrete implementation of UpdateQuery.
+type updateQuery struct {
+	table   string
+	updates []*gocrudv1.ColumnUpdate
+	filter  *gocrudv1.Filter
+}
+
+func (q *updateQuery) Table() string                     { return q.table }
+func (q *updateQuery) Updates() []*gocrudv1.ColumnUpdate { return q.updates }
+func (q *updateQuery) Filter() *gocrudv1.Filter          { return q.filter }
+
+// NewUpdateQuery constructs an UpdateQuery. Pass nil for filter to omit the
+// WHERE clause. Use ColumnUpdate.use_default to apply SQL DEFAULT to a column.
+func NewUpdateQuery(table string, updates []*gocrudv1.ColumnUpdate, filter *gocrudv1.Filter) UpdateQuery {
+	return &updateQuery{table: table, updates: updates, filter: filter}
+}
+
 // selectQuery is the concrete implementation of SelectQuery.
 type selectQuery struct {
 	table        string
-	fields       []string
+	columns      []string
 	filter       *gocrudv1.Filter
 	orderBy      []*gocrudv1.OrderBy
 	limit        int32
@@ -104,7 +133,7 @@ type selectQuery struct {
 }
 
 func (q *selectQuery) Table() string                   { return q.table }
-func (q *selectQuery) Fields() []string                { return q.fields }
+func (q *selectQuery) Columns() []string               { return q.columns }
 func (q *selectQuery) Filter() *gocrudv1.Filter        { return q.filter }
 func (q *selectQuery) OrderBy() []*gocrudv1.OrderBy    { return q.orderBy }
 func (q *selectQuery) Limit() int32                    { return q.limit }
@@ -114,7 +143,7 @@ func (q *selectQuery) IncludeTotal() bool              { return q.includeTotal }
 // NewSelectQuery constructs a SelectQuery with the given parameters.
 func NewSelectQuery(
 	table string,
-	fields []string,
+	columns []string,
 	filter *gocrudv1.Filter,
 	orderBy []*gocrudv1.OrderBy,
 	limit int32,
@@ -123,7 +152,7 @@ func NewSelectQuery(
 ) SelectQuery {
 	return &selectQuery{
 		table:        table,
-		fields:       fields,
+		columns:      columns,
 		filter:       filter,
 		orderBy:      orderBy,
 		limit:        limit,

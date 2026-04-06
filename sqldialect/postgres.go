@@ -37,7 +37,7 @@ func (b *postgresBuilder) BuildSelect(q SelectQuery) (string, []any, error) {
 	idx := 1 // next $N placeholder index
 
 	// SELECT
-	selectClause, err := pgBuildSelect(q.Fields(), q.IncludeTotal())
+	selectClause, err := pgBuildSelect(q.Columns(), q.IncludeTotal())
 	if err != nil {
 		return "", nil, err
 	}
@@ -133,6 +133,63 @@ func (b *postgresBuilder) BuildInsert(q InsertQuery) (string, []any, error) {
 }
 
 // ---------------------------------------------------------------------------
+// UPDATE
+// ---------------------------------------------------------------------------
+
+// BuildUpdate implements the [Builder] interface.
+// Filter may be nil, which generates an UPDATE with no WHERE clause.
+func (b *postgresBuilder) BuildUpdate(q UpdateQuery) (string, []any, error) {
+	if len(q.Updates()) == 0 {
+		return "", nil, fmt.Errorf("UPDATE requires at least one column update")
+	}
+
+	quotedTable, err := pgQuoteIdent(q.Table())
+	if err != nil {
+		return "", nil, fmt.Errorf("invalid table name: %w", err)
+	}
+
+	setParts := make([]string, len(q.Updates()))
+	var args []any
+	idx := 1
+	for i, u := range q.Updates() {
+		qc, err := pgQuoteIdent(u.GetColumn())
+		if err != nil {
+			return "", nil, fmt.Errorf("invalid column name: %w", err)
+		}
+		switch u.GetAssignment().(type) {
+		case *gocrudv1.ColumnUpdate_UseDefault:
+			setParts[i] = fmt.Sprintf("%s = DEFAULT", qc)
+		case *gocrudv1.ColumnUpdate_Value:
+			native, err := pgValueToNative(u.GetValue())
+			if err != nil {
+				return "", nil, fmt.Errorf("column %q: %w", u.GetColumn(), err)
+			}
+			setParts[i] = fmt.Sprintf("%s = $%d", qc, idx)
+			args = append(args, native)
+			idx++
+		default:
+			return "", nil, fmt.Errorf("column %q: no value or default specified", u.GetColumn())
+		}
+	}
+
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "UPDATE %s SET %s", quotedTable, strings.Join(setParts, ", "))
+
+	if q.Filter() != nil {
+		where, whereArgs, _, err := pgBuildFilter(q.Filter(), idx)
+		if err != nil {
+			return "", nil, err
+		}
+		if where != "" {
+			fmt.Fprintf(&sb, " WHERE %s", where)
+			args = append(args, whereArgs...)
+		}
+	}
+
+	return sb.String(), args, nil
+}
+
+// ---------------------------------------------------------------------------
 // SELECT
 // ---------------------------------------------------------------------------
 
@@ -142,16 +199,16 @@ func (b *postgresBuilder) BuildInsert(q InsertQuery) (string, []any, error) {
 // requiring a separate query.
 const totalCountExpr = "COUNT(*) OVER() AS _total_count"
 
-func pgBuildSelect(fields []string, includeTotal bool) (string, error) {
+func pgBuildSelect(columns []string, includeTotal bool) (string, error) {
 	var base string
-	if len(fields) == 0 {
+	if len(columns) == 0 {
 		base = "*"
 	} else {
-		quoted := make([]string, len(fields))
-		for i, f := range fields {
-			q, err := pgQuoteIdent(f)
+		quoted := make([]string, len(columns))
+		for i, c := range columns {
+			q, err := pgQuoteIdent(c)
 			if err != nil {
-				return "", fmt.Errorf("invalid field name: %w", err)
+				return "", fmt.Errorf("invalid column name: %w", err)
 			}
 			quoted[i] = q
 		}
@@ -181,30 +238,30 @@ func pgBuildFilter(f *gocrudv1.Filter, idx int) (string, []any, int, error) {
 }
 
 func pgBuildCondition(c *gocrudv1.Condition, idx int) (string, []any, int, error) {
-	field, err := pgQuoteIdent(c.GetField())
+	column, err := pgQuoteIdent(c.GetColumn())
 	if err != nil {
-		return "", nil, idx, fmt.Errorf("invalid field %q: %w", c.GetField(), err)
+		return "", nil, idx, fmt.Errorf("invalid column %q: %w", c.GetColumn(), err)
 	}
 
 	switch c.GetOp() {
 	case gocrudv1.Operator_IS_NULL:
-		return fmt.Sprintf("%s IS NULL", field), nil, idx, nil
+		return fmt.Sprintf("%s IS NULL", column), nil, idx, nil
 
 	case gocrudv1.Operator_IS_NOT_NULL:
-		return fmt.Sprintf("%s IS NOT NULL", field), nil, idx, nil
+		return fmt.Sprintf("%s IS NOT NULL", column), nil, idx, nil
 
 	case gocrudv1.Operator_IN, gocrudv1.Operator_NOT_IN:
 		vl := c.GetValues()
 		if vl == nil || len(vl.GetValues()) == 0 {
-			return "", nil, idx, fmt.Errorf("operator %v requires a non-empty values list for field %q",
-				c.GetOp(), c.GetField())
+			return "", nil, idx, fmt.Errorf("operator %v requires a non-empty values list for column %q",
+				c.GetOp(), c.GetColumn())
 		}
 		placeholders := make([]string, len(vl.GetValues()))
 		var setArgs []any
 		for i, v := range vl.GetValues() {
 			native, err := pgValueToNative(v)
 			if err != nil {
-				return "", nil, idx, fmt.Errorf("field %q values[%d]: %w", c.GetField(), i, err)
+				return "", nil, idx, fmt.Errorf("column %q values[%d]: %w", c.GetColumn(), i, err)
 			}
 			placeholders[i] = fmt.Sprintf("$%d", idx)
 			setArgs = append(setArgs, native)
@@ -214,7 +271,7 @@ func pgBuildCondition(c *gocrudv1.Condition, idx int) (string, []any, int, error
 		if c.GetOp() == gocrudv1.Operator_NOT_IN {
 			op = "NOT IN"
 		}
-		return fmt.Sprintf("%s %s (%s)", field, op, strings.Join(placeholders, ", ")), setArgs, idx, nil
+		return fmt.Sprintf("%s %s (%s)", column, op, strings.Join(placeholders, ", ")), setArgs, idx, nil
 
 	default:
 		opStr, err := pgOperatorSQL(c.GetOp())
@@ -223,14 +280,14 @@ func pgBuildCondition(c *gocrudv1.Condition, idx int) (string, []any, int, error
 		}
 		v := c.GetValue()
 		if v == nil {
-			return "", nil, idx, fmt.Errorf("field %q: operator %v requires a value", c.GetField(), c.GetOp())
+			return "", nil, idx, fmt.Errorf("column %q: operator %v requires a value", c.GetColumn(), c.GetOp())
 		}
 		native, err := pgValueToNative(v)
 		if err != nil {
-			return "", nil, idx, fmt.Errorf("field %q: %w", c.GetField(), err)
+			return "", nil, idx, fmt.Errorf("column %q: %w", c.GetColumn(), err)
 		}
 		placeholder := fmt.Sprintf("$%d", idx)
-		return fmt.Sprintf("%s %s %s", field, opStr, placeholder), []any{native}, idx + 1, nil
+		return fmt.Sprintf("%s %s %s", column, opStr, placeholder), []any{native}, idx + 1, nil
 	}
 }
 
@@ -281,9 +338,9 @@ func pgBuildComposite(c *gocrudv1.CompositeFilter, idx int) (string, []any, int,
 func pgBuildOrderBy(order []*gocrudv1.OrderBy) (string, error) {
 	parts := make([]string, len(order))
 	for i, o := range order {
-		q, err := pgQuoteIdent(o.GetField())
+		q, err := pgQuoteIdent(o.GetColumn())
 		if err != nil {
-			return "", fmt.Errorf("invalid order_by field: %w", err)
+			return "", fmt.Errorf("invalid order_by column: %w", err)
 		}
 		dir := "ASC"
 		if o.GetDirection() == gocrudv1.OrderBy_DESC {

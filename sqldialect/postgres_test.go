@@ -37,23 +37,23 @@ var b = &postgresBuilder{}
 // Proto builder helpers
 // ---------------------------------------------------------------------------
 
-func condFilter(field string, op gocrudv1.Operator, v *gocrudv1.Value) *gocrudv1.Filter {
+func condFilter(column string, op gocrudv1.Operator, v *gocrudv1.Value) *gocrudv1.Filter {
 	return &gocrudv1.Filter{Filter: &gocrudv1.Filter_Condition{
-		Condition: &gocrudv1.Condition{Field: field, Op: op, Operand: &gocrudv1.Condition_Value{Value: v}},
+		Condition: &gocrudv1.Condition{Column: column, Op: op, Operand: &gocrudv1.Condition_Value{Value: v}},
 	}}
 }
 
-func inFilter(field string, op gocrudv1.Operator, vals ...*gocrudv1.Value) *gocrudv1.Filter {
+func inFilter(column string, op gocrudv1.Operator, vals ...*gocrudv1.Value) *gocrudv1.Filter {
 	return &gocrudv1.Filter{Filter: &gocrudv1.Filter_Condition{
-		Condition: &gocrudv1.Condition{Field: field, Op: op,
+		Condition: &gocrudv1.Condition{Column: column, Op: op,
 			Operand: &gocrudv1.Condition_Values{Values: &gocrudv1.ValueList{Values: vals}},
 		},
 	}}
 }
 
-func nullFilter(field string, op gocrudv1.Operator) *gocrudv1.Filter {
+func nullFilter(column string, op gocrudv1.Operator) *gocrudv1.Filter {
 	return &gocrudv1.Filter{Filter: &gocrudv1.Filter_Condition{
-		Condition: &gocrudv1.Condition{Field: field, Op: op},
+		Condition: &gocrudv1.Condition{Column: column, Op: op},
 	}}
 }
 
@@ -85,8 +85,8 @@ func boolVal(v bool) *gocrudv1.Value {
 	return &gocrudv1.Value{Kind: &gocrudv1.Value_BoolValue{BoolValue: v}}
 }
 
-func orderBy(field string, dir gocrudv1.OrderBy_Direction) *gocrudv1.OrderBy {
-	return &gocrudv1.OrderBy{Field: field, Direction: dir}
+func orderBy(column string, dir gocrudv1.OrderBy_Direction) *gocrudv1.OrderBy {
+	return &gocrudv1.OrderBy{Column: column, Direction: dir}
 }
 
 // ---------------------------------------------------------------------------
@@ -182,6 +182,111 @@ func TestBuildInsert(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// UPDATE
+// ---------------------------------------------------------------------------
+
+func TestBuildUpdate(t *testing.T) {
+	tests := []struct {
+		name     string
+		q        updateQuery
+		wantSQL  string
+		wantArgs []any
+		wantErr  bool
+	}{
+		{
+			name: "single column no filter",
+			q: updateQuery{
+				table: "users",
+				updates: []*gocrudv1.ColumnUpdate{
+					{Column: "name", Assignment: &gocrudv1.ColumnUpdate_Value{Value: strVal("alice")}},
+				},
+			},
+			wantSQL:  `UPDATE "users" SET "name" = $1`,
+			wantArgs: []any{"alice"},
+		},
+		{
+			name: "multiple columns with filter",
+			q: updateQuery{
+				table: "users",
+				updates: []*gocrudv1.ColumnUpdate{
+					{Column: "name", Assignment: &gocrudv1.ColumnUpdate_Value{Value: strVal("bob")}},
+					{Column: "age", Assignment: &gocrudv1.ColumnUpdate_Value{Value: intVal(30)}},
+				},
+				filter: condFilter("id", gocrudv1.Operator_EQUAL, intVal(42)),
+			},
+			wantSQL:  `UPDATE "users" SET "name" = $1, "age" = $2 WHERE "id" = $3`,
+			wantArgs: []any{"bob", int64(30), int64(42)},
+		},
+		{
+			name: "DEFAULT resets column",
+			q: updateQuery{
+				table: "users",
+				updates: []*gocrudv1.ColumnUpdate{
+					{Column: "verified_at", Assignment: &gocrudv1.ColumnUpdate_UseDefault{UseDefault: true}},
+					{Column: "name", Assignment: &gocrudv1.ColumnUpdate_Value{Value: strVal("carol")}},
+				},
+				filter: condFilter("id", gocrudv1.Operator_EQUAL, intVal(7)),
+			},
+			wantSQL:  `UPDATE "users" SET "verified_at" = DEFAULT, "name" = $1 WHERE "id" = $2`,
+			wantArgs: []any{"carol", int64(7)},
+		},
+		{
+			name: "all DEFAULT",
+			q: updateQuery{
+				table: "users",
+				updates: []*gocrudv1.ColumnUpdate{
+					{Column: "score", Assignment: &gocrudv1.ColumnUpdate_UseDefault{UseDefault: true}},
+					{Column: "rank", Assignment: &gocrudv1.ColumnUpdate_UseDefault{UseDefault: true}},
+				},
+				filter: condFilter("id", gocrudv1.Operator_EQUAL, intVal(1)),
+			},
+			wantSQL:  `UPDATE "users" SET "score" = DEFAULT, "rank" = DEFAULT WHERE "id" = $1`,
+			wantArgs: []any{int64(1)},
+		},
+		{
+			name:    "empty updates",
+			q:       updateQuery{table: "users"},
+			wantErr: true,
+		},
+		{
+			name: "invalid table name",
+			q: updateQuery{
+				table: "bad-table",
+				updates: []*gocrudv1.ColumnUpdate{
+					{Column: "name", Assignment: &gocrudv1.ColumnUpdate_Value{Value: strVal("x")}},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid column name",
+			q: updateQuery{
+				table: "users",
+				updates: []*gocrudv1.ColumnUpdate{
+					{Column: "bad-col", Assignment: &gocrudv1.ColumnUpdate_Value{Value: strVal("x")}},
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, args, err := b.BuildUpdate(&tc.q)
+			if tc.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			assertQuery(t, got, args, tc.wantSQL, tc.wantArgs)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
 // SELECT clause and identifier validation
 // ---------------------------------------------------------------------------
 
@@ -199,7 +304,7 @@ func TestBuildSelect(t *testing.T) {
 		},
 		{
 			name:    "specific fields",
-			q:       selectQuery{table: "users", fields: []string{"id", "name", "email"}, limit: 10},
+			q:       selectQuery{table: "users", columns: []string{"id", "name", "email"}, limit: 10},
 			wantSQL: `SELECT "id", "name", "email" FROM "users" LIMIT $1`,
 		},
 		{
@@ -209,7 +314,7 @@ func TestBuildSelect(t *testing.T) {
 		},
 		{
 			name:    "include_total with fields",
-			q:       selectQuery{table: "users", fields: []string{"id", "name"}, limit: 10, includeTotal: true},
+			q:       selectQuery{table: "users", columns: []string{"id", "name"}, limit: 10, includeTotal: true},
 			wantSQL: `SELECT "id", "name", COUNT(*) OVER() AS _total_count FROM "users" LIMIT $1`,
 		},
 		// Identifier validation
@@ -220,7 +325,7 @@ func TestBuildSelect(t *testing.T) {
 		{name: "table with space", q: selectQuery{table: "tbl name", limit: 10}, wantErr: true},
 		{
 			name:    "field with SQL injection",
-			q:       selectQuery{table: "users", fields: []string{"name; DROP TABLE users"}, limit: 10},
+			q:       selectQuery{table: "users", columns: []string{"name; DROP TABLE users"}, limit: 10},
 			wantErr: true,
 		},
 	}
@@ -556,7 +661,7 @@ func TestBuildFull(t *testing.T) {
 			name: "filter + order + pagination",
 			q: selectQuery{
 				table:  "products",
-				fields: []string{"id", "name", "price"},
+				columns: []string{"id", "name", "price"},
 				filter: andFilter(
 					condFilter("price", gocrudv1.Operator_GREATER_THAN, floatVal(10.0)),
 					nullFilter("deleted_at", gocrudv1.Operator_IS_NULL),
@@ -578,7 +683,7 @@ func TestBuildFull(t *testing.T) {
 			name: "filter + order + pagination + include_total",
 			q: selectQuery{
 				table:  "orders",
-				fields: []string{"id", "total"},
+				columns: []string{"id", "total"},
 				filter: condFilter("total", gocrudv1.Operator_GREATER_THAN, floatVal(50.0)),
 				orderBy: []*gocrudv1.OrderBy{
 					orderBy("total", gocrudv1.OrderBy_DESC),
