@@ -287,6 +287,105 @@ func TestBuildUpdate(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// UPSERT
+// ---------------------------------------------------------------------------
+
+func TestBuildUpsert(t *testing.T) {
+	tests := []struct {
+		name     string
+		q        upsertQuery
+		wantSQL  string
+		wantArgs []any
+		wantErr  bool
+	}{
+		{
+			name: "single conflict column, all others updated via EXCLUDED",
+			q: upsertQuery{
+				table:        "users",
+				columns:      []string{"id", "name", "email"},
+				values:       []*gocrudv1.Value{intVal(1), strVal("alice"), strVal("alice@example.com")},
+				conflictCols: []string{"id"},
+			},
+			wantSQL:  `INSERT INTO "users" ("id", "name", "email") VALUES ($1, $2, $3) ON CONFLICT ("id") DO UPDATE SET "name" = EXCLUDED."name", "email" = EXCLUDED."email"`,
+			wantArgs: []any{int64(1), "alice", "alice@example.com"},
+		},
+		{
+			name: "multiple conflict columns",
+			q: upsertQuery{
+				table:        "memberships",
+				columns:      []string{"user_id", "group_id", "role"},
+				values:       []*gocrudv1.Value{intVal(7), intVal(3), strVal("admin")},
+				conflictCols: []string{"user_id", "group_id"},
+			},
+			wantSQL:  `INSERT INTO "memberships" ("user_id", "group_id", "role") VALUES ($1, $2, $3) ON CONFLICT ("user_id", "group_id") DO UPDATE SET "role" = EXCLUDED."role"`,
+			wantArgs: []any{int64(7), int64(3), "admin"},
+		},
+		{
+			name: "DEFAULT value in insert",
+			q: upsertQuery{
+				table:        "users",
+				columns:      []string{"id", "name", "created_at"},
+				values:       []*gocrudv1.Value{intVal(5), strVal("bob"), nil},
+				conflictCols: []string{"id"},
+			},
+			wantSQL:  `INSERT INTO "users" ("id", "name", "created_at") VALUES ($1, $2, DEFAULT) ON CONFLICT ("id") DO UPDATE SET "name" = EXCLUDED."name", "created_at" = EXCLUDED."created_at"`,
+			wantArgs: []any{int64(5), "bob"},
+		},
+		{
+			name:    "empty columns",
+			q:       upsertQuery{table: "users", conflictCols: []string{"id"}},
+			wantErr: true,
+		},
+		{
+			name:    "columns values length mismatch",
+			q:       upsertQuery{table: "users", columns: []string{"id", "name"}, values: []*gocrudv1.Value{intVal(1)}, conflictCols: []string{"id"}},
+			wantErr: true,
+		},
+		{
+			name:    "empty conflict columns",
+			q:       upsertQuery{table: "users", columns: []string{"id", "name"}, values: []*gocrudv1.Value{intVal(1), strVal("x")}},
+			wantErr: true,
+		},
+		{
+			name: "all columns are conflict columns produces DO NOTHING",
+			q: upsertQuery{
+				table:        "users",
+				columns:      []string{"id"},
+				values:       []*gocrudv1.Value{intVal(1)},
+				conflictCols: []string{"id"},
+			},
+			wantSQL:  `INSERT INTO "users" ("id") VALUES ($1) ON CONFLICT ("id") DO NOTHING`,
+			wantArgs: []any{int64(1)},
+		},
+		{
+			name:    "invalid table name",
+			q:       upsertQuery{table: "bad-table", columns: []string{"id", "name"}, values: []*gocrudv1.Value{intVal(1), strVal("x")}, conflictCols: []string{"id"}},
+			wantErr: true,
+		},
+		{
+			name:    "invalid conflict column name",
+			q:       upsertQuery{table: "users", columns: []string{"id", "name"}, values: []*gocrudv1.Value{intVal(1), strVal("x")}, conflictCols: []string{"bad-col"}},
+			wantErr: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, args, err := b.BuildUpsert(&tc.q)
+			if tc.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			assertQuery(t, got, args, tc.wantSQL, tc.wantArgs)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
 // DELETE
 // ---------------------------------------------------------------------------
 

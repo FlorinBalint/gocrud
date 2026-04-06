@@ -52,6 +52,7 @@ type Builder interface {
 	BuildSelect(q SelectQuery) (sql string, args []any, err error)
 	BuildInsert(q InsertQuery) (sql string, args []any, err error)
 	BuildUpdate(q UpdateQuery) (sql string, args []any, err error)
+	BuildUpsert(q UpsertQuery) (sql string, args []any, err error)
 	BuildDelete(q DeleteQuery) (sql string, args []any, err error)
 }
 
@@ -120,6 +121,48 @@ func (q *updateQuery) Filter() *gocrudv1.Filter          { return q.filter }
 // WHERE clause. Use ColumnUpdate.use_default to apply SQL DEFAULT to a column.
 func NewUpdateQuery(table string, updates []*gocrudv1.ColumnUpdate, filter *gocrudv1.Filter) UpdateQuery {
 	return &updateQuery{table: table, updates: updates, filter: filter}
+}
+
+// UpsertQuery is the fully-resolved internal representation of an
+// INSERT … ON CONFLICT (conflict_columns) DO UPDATE SET … handed to a Builder.
+//
+// It embeds InsertQuery for the INSERT part. On conflict, every column that is
+// not a conflict column is updated to its EXCLUDED value (the value from the
+// rejected row). The same columns and values drive both the insert and the
+// conflict update — no separate update list is required.
+type UpsertQuery interface {
+	InsertQuery                 // table, columns, values for the INSERT part
+	ConflictColumns() []string // columns defining the conflict target; must be non-empty
+}
+
+// upsertQuery is the concrete implementation of UpsertQuery.
+type upsertQuery struct {
+	table        string
+	columns      []string
+	values       []*gocrudv1.Value
+	conflictCols []string
+}
+
+func (q *upsertQuery) Table() string             { return q.table }
+func (q *upsertQuery) Columns() []string         { return q.columns }
+func (q *upsertQuery) Values() []*gocrudv1.Value { return q.values }
+func (q *upsertQuery) ConflictColumns() []string { return q.conflictCols }
+
+// NewUpsertQuery constructs an UpsertQuery. Pass nil for a value entry to use
+// SQL DEFAULT for that column. len(columns) must equal len(values).
+// conflictCols must be non-empty and a subset of columns.
+func NewUpsertQuery(
+	table string,
+	columns []string,
+	values []*gocrudv1.Value,
+	conflictCols []string,
+) UpsertQuery {
+	return &upsertQuery{
+		table:        table,
+		columns:      columns,
+		values:       values,
+		conflictCols: conflictCols,
+	}
 }
 
 // DeleteQuery is the fully-resolved internal representation of a DELETE handed

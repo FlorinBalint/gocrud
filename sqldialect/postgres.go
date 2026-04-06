@@ -190,6 +190,105 @@ func (b *postgresBuilder) BuildUpdate(q UpdateQuery) (string, []any, error) {
 }
 
 // ---------------------------------------------------------------------------
+// UPSERT
+// ---------------------------------------------------------------------------
+
+// BuildUpsert implements the [Builder] interface.
+// It generates INSERT … ON CONFLICT (conflict_columns) DO UPDATE SET … where
+// the SET clause is derived automatically: every column that is not a conflict
+// column is updated to its EXCLUDED value (the value from the rejected row).
+// If all columns are conflict columns there is nothing to update, so the
+// statement becomes INSERT … ON CONFLICT (conflict_columns) DO NOTHING —
+// effectively a pure insert that silently no-ops on duplicate keys.
+func (b *postgresBuilder) BuildUpsert(q UpsertQuery) (string, []any, error) {
+	if len(q.Columns()) == 0 {
+		return "", nil, fmt.Errorf("UPSERT requires at least one column")
+	}
+	if len(q.Columns()) != len(q.Values()) {
+		return "", nil, fmt.Errorf("columns and values length mismatch: %d columns, %d values",
+			len(q.Columns()), len(q.Values()))
+	}
+	if len(q.ConflictColumns()) == 0 {
+		return "", nil, fmt.Errorf("UPSERT requires at least one conflict column")
+	}
+
+	quotedTable, err := pgQuoteIdent(q.Table())
+	if err != nil {
+		return "", nil, fmt.Errorf("invalid table name: %w", err)
+	}
+
+	// Quote and validate insert columns.
+	quotedCols := make([]string, len(q.Columns()))
+	for i, col := range q.Columns() {
+		qc, err := pgQuoteIdent(col)
+		if err != nil {
+			return "", nil, fmt.Errorf("invalid column name: %w", err)
+		}
+		quotedCols[i] = qc
+	}
+
+	// Build VALUES placeholders; $N index continues into the SET clause.
+	placeholders := make([]string, len(q.Values()))
+	var args []any
+	idx := 1
+	for i, v := range q.Values() {
+		if v == nil {
+			placeholders[i] = "DEFAULT"
+		} else {
+			native, err := pgValueToNative(v)
+			if err != nil {
+				return "", nil, fmt.Errorf("column %q: %w", q.Columns()[i], err)
+			}
+			placeholders[i] = fmt.Sprintf("$%d", idx)
+			args = append(args, native)
+			idx++
+		}
+	}
+
+	// Quote and validate conflict columns.
+	quotedConflict := make([]string, len(q.ConflictColumns()))
+	for i, col := range q.ConflictColumns() {
+		qc, err := pgQuoteIdent(col)
+		if err != nil {
+			return "", nil, fmt.Errorf("invalid conflict column name: %w", err)
+		}
+		quotedConflict[i] = qc
+	}
+
+	// Derive the SET clause: all non-conflict columns take their EXCLUDED value.
+	conflictSet := make(map[string]bool, len(q.ConflictColumns()))
+	for _, col := range q.ConflictColumns() {
+		conflictSet[col] = true
+	}
+	var setParts []string
+	for i, col := range q.Columns() {
+		if !conflictSet[col] {
+			setParts = append(setParts, fmt.Sprintf("%s = EXCLUDED.%s", quotedCols[i], quotedCols[i]))
+		}
+	}
+	var sql string
+	if len(setParts) == 0 {
+		sql = fmt.Sprintf(
+			"INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) DO NOTHING",
+			quotedTable,
+			strings.Join(quotedCols, ", "),
+			strings.Join(placeholders, ", "),
+			strings.Join(quotedConflict, ", "),
+		)
+	} else {
+		sql = fmt.Sprintf(
+			"INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) DO UPDATE SET %s",
+			quotedTable,
+			strings.Join(quotedCols, ", "),
+			strings.Join(placeholders, ", "),
+			strings.Join(quotedConflict, ", "),
+			strings.Join(setParts, ", "),
+		)
+	}
+	return sql, args, nil
+}
+
+// ---------------------------------------------------------------------------
 // DELETE
 // ---------------------------------------------------------------------------
 
