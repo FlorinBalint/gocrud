@@ -52,6 +52,7 @@ type Builder interface {
 	BuildSelect(q SelectQuery) (sql string, args []any, err error)
 	BuildInsert(q InsertQuery) (sql string, args []any, err error)
 	BuildUpdate(q UpdateQuery) (sql string, args []any, err error)
+	BuildDelete(q DeleteQuery) (sql string, args []any, err error)
 }
 
 // ForBackend returns a Builder for the given backend dialect.
@@ -119,6 +120,31 @@ func (q *updateQuery) Filter() *gocrudv1.Filter          { return q.filter }
 // WHERE clause. Use ColumnUpdate.use_default to apply SQL DEFAULT to a column.
 func NewUpdateQuery(table string, updates []*gocrudv1.ColumnUpdate, filter *gocrudv1.Filter) UpdateQuery {
 	return &updateQuery{table: table, updates: updates, filter: filter}
+}
+
+// DeleteQuery is the fully-resolved internal representation of a DELETE handed
+// to a Builder by the crud service.
+//
+// A non-nil Filter is mandatory. Builders must refuse to execute a DELETE with
+// no WHERE clause to prevent accidental full-table deletion.
+type DeleteQuery interface {
+	Table() string
+	Filter() *gocrudv1.Filter // must be non-nil
+}
+
+// deleteQuery is the concrete implementation of DeleteQuery.
+type deleteQuery struct {
+	table  string
+	filter *gocrudv1.Filter
+}
+
+func (q *deleteQuery) Table() string            { return q.table }
+func (q *deleteQuery) Filter() *gocrudv1.Filter { return q.filter }
+
+// NewDeleteQuery constructs a DeleteQuery. filter must be non-nil; BuildDelete
+// will return an error if it is nil or produces an empty WHERE clause.
+func NewDeleteQuery(table string, filter *gocrudv1.Filter) DeleteQuery {
+	return &deleteQuery{table: table, filter: filter}
 }
 
 // selectQuery is the concrete implementation of SelectQuery.

@@ -190,6 +190,34 @@ func (b *postgresBuilder) BuildUpdate(q UpdateQuery) (string, []any, error) {
 }
 
 // ---------------------------------------------------------------------------
+// DELETE
+// ---------------------------------------------------------------------------
+
+// BuildDelete implements the [Builder] interface.
+// Returns an error if Filter is nil or resolves to an empty WHERE clause, to
+// prevent accidental full-table deletion.
+func (b *postgresBuilder) BuildDelete(q DeleteQuery) (string, []any, error) {
+	if q.Filter() == nil {
+		return "", nil, fmt.Errorf("DELETE requires a WHERE clause to prevent accidental full-table deletion")
+	}
+
+	quotedTable, err := pgQuoteIdent(q.Table())
+	if err != nil {
+		return "", nil, fmt.Errorf("invalid table name: %w", err)
+	}
+
+	where, args, _, err := pgBuildFilter(q.Filter(), 1)
+	if err != nil {
+		return "", nil, err
+	}
+	if where == "" {
+		return "", nil, fmt.Errorf("DELETE: filter resolved to an empty WHERE clause; refusing to delete all rows")
+	}
+
+	return fmt.Sprintf("DELETE FROM %s WHERE %s", quotedTable, where), args, nil
+}
+
+// ---------------------------------------------------------------------------
 // SELECT
 // ---------------------------------------------------------------------------
 

@@ -287,6 +287,64 @@ func TestBuildUpdate(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// DELETE
+// ---------------------------------------------------------------------------
+
+func TestBuildDelete(t *testing.T) {
+	tests := []struct {
+		name     string
+		q        deleteQuery
+		wantSQL  string
+		wantArgs []any
+		wantErr  bool
+	}{
+		{
+			name:     "single condition",
+			q:        deleteQuery{table: "users", filter: condFilter("id", gocrudv1.Operator_EQUAL, intVal(42))},
+			wantSQL:  `DELETE FROM "users" WHERE "id" = $1`,
+			wantArgs: []any{int64(42)},
+		},
+		{
+			name: "composite filter",
+			q: deleteQuery{
+				table: "sessions",
+				filter: andFilter(
+					condFilter("user_id", gocrudv1.Operator_EQUAL, intVal(7)),
+					nullFilter("expired_at", gocrudv1.Operator_IS_NOT_NULL),
+				),
+			},
+			wantSQL:  `DELETE FROM "sessions" WHERE ("user_id" = $1 AND "expired_at" IS NOT NULL)`,
+			wantArgs: []any{int64(7)},
+		},
+		{
+			name:    "nil filter is rejected",
+			q:       deleteQuery{table: "users", filter: nil},
+			wantErr: true,
+		},
+		{
+			name:    "invalid table name",
+			q:       deleteQuery{table: "bad-table", filter: condFilter("id", gocrudv1.Operator_EQUAL, intVal(1))},
+			wantErr: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, args, err := b.BuildDelete(&tc.q)
+			if tc.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			assertQuery(t, got, args, tc.wantSQL, tc.wantArgs)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
 // SELECT clause and identifier validation
 // ---------------------------------------------------------------------------
 
