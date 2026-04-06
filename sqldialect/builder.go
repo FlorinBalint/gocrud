@@ -43,13 +43,14 @@ type SelectQuery interface {
 	IncludeTotal() bool // when true, appends COUNT(*) OVER() as the last SELECT column
 }
 
-// Builder translates a SelectQuery into a SQL SELECT string and positional arguments.
+// Builder translates query values into SQL strings and positional arguments.
 // Implementations must:
 //   - Validate all identifier names (table, columns) to prevent SQL injection.
 //   - Use $1, $2, … positional placeholders for all values.
 //   - Never interpolate values into the SQL string.
 type Builder interface {
 	BuildSelect(q SelectQuery) (sql string, args []any, err error)
+	BuildInsert(q InsertQuery) (sql string, args []any, err error)
 }
 
 // ForBackend returns a Builder for the given backend dialect.
@@ -60,6 +61,35 @@ func ForBackend(b BackendType) (Builder, error) {
 	default:
 		return nil, fmt.Errorf("sqldialect: unsupported backend %v", b)
 	}
+}
+
+// InsertQuery is the fully-resolved internal representation of an INSERT handed
+// to a Builder by the crud service.
+//
+// A nil entry in Values() at index i means SQL DEFAULT for that column —
+// the database will apply its column default (sequence, expression, etc.).
+// len(Columns()) must equal len(Values()).
+type InsertQuery interface {
+	Table() string
+	Columns() []string         // must be non-empty
+	Values() []*gocrudv1.Value // nil entry → DEFAULT for that column
+}
+
+// insertQuery is the concrete implementation of InsertQuery.
+type insertQuery struct {
+	table   string
+	columns []string
+	values  []*gocrudv1.Value
+}
+
+func (q *insertQuery) Table() string             { return q.table }
+func (q *insertQuery) Columns() []string         { return q.columns }
+func (q *insertQuery) Values() []*gocrudv1.Value { return q.values }
+
+// NewInsertQuery constructs an InsertQuery. Pass nil for a value to use SQL
+// DEFAULT for that column. len(columns) must equal len(values).
+func NewInsertQuery(table string, columns []string, values []*gocrudv1.Value) InsertQuery {
+	return &insertQuery{table: table, columns: columns, values: values}
 }
 
 // selectQuery is the concrete implementation of SelectQuery.

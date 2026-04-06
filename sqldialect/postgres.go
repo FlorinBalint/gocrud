@@ -28,6 +28,8 @@ import (
 // always passed as query arguments, never interpolated into SQL.
 type postgresBuilder struct{}
 
+var _ Builder = (*postgresBuilder)(nil)
+
 // BuildSelect implements the [Builder] interface.
 func (b *postgresBuilder) BuildSelect(q SelectQuery) (string, []any, error) {
 	var sb strings.Builder
@@ -73,6 +75,61 @@ func (b *postgresBuilder) BuildSelect(q SelectQuery) (string, []any, error) {
 	args = append(args, limitArgs...)
 
 	return sb.String(), args, nil
+}
+
+// ---------------------------------------------------------------------------
+// INSERT
+// ---------------------------------------------------------------------------
+
+// BuildInsert implements the [Builder] interface.
+// A nil value entry produces the SQL keyword DEFAULT for that column, allowing
+// the database to apply its column default (sequence, expression, etc.).
+func (b *postgresBuilder) BuildInsert(q InsertQuery) (string, []any, error) {
+	if len(q.Columns()) == 0 {
+		return "", nil, fmt.Errorf("INSERT requires at least one column")
+	}
+	if len(q.Columns()) != len(q.Values()) {
+		return "", nil, fmt.Errorf("columns and values length mismatch: %d columns, %d values",
+			len(q.Columns()), len(q.Values()))
+	}
+
+	quotedTable, err := pgQuoteIdent(q.Table())
+	if err != nil {
+		return "", nil, fmt.Errorf("invalid table name: %w", err)
+	}
+
+	quotedCols := make([]string, len(q.Columns()))
+	for i, col := range q.Columns() {
+		qc, err := pgQuoteIdent(col)
+		if err != nil {
+			return "", nil, fmt.Errorf("invalid column name: %w", err)
+		}
+		quotedCols[i] = qc
+	}
+
+	placeholders := make([]string, len(q.Values()))
+	var args []any
+	idx := 1
+	for i, v := range q.Values() {
+		if v == nil {
+			placeholders[i] = "DEFAULT"
+		} else {
+			native, err := pgValueToNative(v)
+			if err != nil {
+				return "", nil, fmt.Errorf("column %q: %w", q.Columns()[i], err)
+			}
+			placeholders[i] = fmt.Sprintf("$%d", idx)
+			args = append(args, native)
+			idx++
+		}
+	}
+
+	sql := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
+		quotedTable,
+		strings.Join(quotedCols, ", "),
+		strings.Join(placeholders, ", "),
+	)
+	return sql, args, nil
 }
 
 // ---------------------------------------------------------------------------

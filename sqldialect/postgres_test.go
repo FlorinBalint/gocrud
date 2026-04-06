@@ -90,6 +90,98 @@ func orderBy(field string, dir gocrudv1.OrderBy_Direction) *gocrudv1.OrderBy {
 }
 
 // ---------------------------------------------------------------------------
+// INSERT
+// ---------------------------------------------------------------------------
+
+func TestBuildInsert(t *testing.T) {
+	tests := []struct {
+		name     string
+		q        insertQuery
+		wantSQL  string
+		wantArgs []any
+		wantErr  bool
+	}{
+		{
+			name: "all values",
+			q: insertQuery{
+				table:   "users",
+				columns: []string{"name", "email", "age"},
+				values:  []*gocrudv1.Value{strVal("alice"), strVal("alice@example.com"), intVal(30)},
+			},
+			wantSQL:  `INSERT INTO "users" ("name", "email", "age") VALUES ($1, $2, $3)`,
+			wantArgs: []any{"alice", "alice@example.com", int64(30)},
+		},
+		{
+			name: "with DEFAULT for one column",
+			q: insertQuery{
+				table:   "users",
+				columns: []string{"id", "name"},
+				values:  []*gocrudv1.Value{nil, strVal("bob")},
+			},
+			wantSQL:  `INSERT INTO "users" ("id", "name") VALUES (DEFAULT, $1)`,
+			wantArgs: []any{"bob"},
+		},
+		{
+			name: "all DEFAULT",
+			q: insertQuery{
+				table:   "users",
+				columns: []string{"id", "created_at"},
+				values:  []*gocrudv1.Value{nil, nil},
+			},
+			wantSQL:  `INSERT INTO "users" ("id", "created_at") VALUES (DEFAULT, DEFAULT)`,
+			wantArgs: nil,
+		},
+		{
+			name:    "empty columns",
+			q:       insertQuery{table: "users"},
+			wantErr: true,
+		},
+		{
+			name: "columns values length mismatch",
+			q: insertQuery{
+				table:   "users",
+				columns: []string{"name", "email"},
+				values:  []*gocrudv1.Value{strVal("alice")},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid table name",
+			q: insertQuery{
+				table:   "bad-table",
+				columns: []string{"name"},
+				values:  []*gocrudv1.Value{strVal("x")},
+			},
+			wantErr: true,
+		},
+		{
+			name: "invalid column name",
+			q: insertQuery{
+				table:   "users",
+				columns: []string{"bad-col"},
+				values:  []*gocrudv1.Value{strVal("x")},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, args, err := b.BuildInsert(&tc.q)
+			if tc.wantErr {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			assertQuery(t, got, args, tc.wantSQL, tc.wantArgs)
+		})
+	}
+}
+
+// ---------------------------------------------------------------------------
 // SELECT clause and identifier validation
 // ---------------------------------------------------------------------------
 
