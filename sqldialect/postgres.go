@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package query
+package sqldialect
 
 import (
 	"fmt"
@@ -28,26 +28,26 @@ import (
 // always passed as query arguments, never interpolated into SQL.
 type postgresBuilder struct{}
 
-// build implements the [builder] interface.
-func (b *postgresBuilder) build(q selectQuery) (string, []any, error) {
+// BuildSelect implements the [Builder] interface.
+func (b *postgresBuilder) BuildSelect(q SelectQuery) (string, []any, error) {
 	var sb strings.Builder
 	var args []any
 	idx := 1 // next $N placeholder index
 
 	// SELECT
-	selectClause, err := pgBuildSelect(q.fields, q.includeTotal)
+	selectClause, err := pgBuildSelect(q.Fields(), q.IncludeTotal())
 	if err != nil {
 		return "", nil, err
 	}
-	quotedTable, err := pgQuoteIdent(q.table)
+	quotedTable, err := pgQuoteIdent(q.Table())
 	if err != nil {
 		return "", nil, fmt.Errorf("invalid table name: %w", err)
 	}
 	fmt.Fprintf(&sb, "SELECT %s FROM %s", selectClause, quotedTable)
 
 	// WHERE
-	if q.filter != nil {
-		where, whereArgs, nextIdx, err := pgBuildFilter(q.filter, idx)
+	if q.Filter() != nil {
+		where, whereArgs, nextIdx, err := pgBuildFilter(q.Filter(), idx)
 		if err != nil {
 			return "", nil, err
 		}
@@ -59,8 +59,8 @@ func (b *postgresBuilder) build(q selectQuery) (string, []any, error) {
 	}
 
 	// ORDER BY
-	if len(q.orderBy) > 0 {
-		order, err := pgBuildOrderBy(q.orderBy)
+	if len(q.OrderBy()) > 0 {
+		order, err := pgBuildOrderBy(q.OrderBy())
 		if err != nil {
 			return "", nil, err
 		}
@@ -68,7 +68,7 @@ func (b *postgresBuilder) build(q selectQuery) (string, []any, error) {
 	}
 
 	// LIMIT / OFFSET
-	limitSQL, limitArgs := pgBuildLimitOffset(q.limit, q.offset, idx)
+	limitSQL, limitArgs := pgBuildLimitOffset(q.Limit(), q.Offset(), idx)
 	fmt.Fprintf(&sb, " %s", limitSQL)
 	args = append(args, limitArgs...)
 

@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package query provides a dialect-agnostic list API that translates a
+// Package list provides a dialect-agnostic list API that translates a
 // proto [gocrudv1.ListRequest] into a SQL SELECT query and executes it
 // against a configured database backend.
 //
 // Usage:
 //
 //	db, _ := sql.Open("pgx", dsn)
-//	svc, _ := query.NewService(db, query.Config{
-//	    Backend: query.BackendPostgres,
+//	svc, _ := curd.NewService(db, crud.Config{
+//	    Backend: sqldialect.Postgres,
 //	    Table:   "users",
 //	}, func(rows *sql.Rows) (*User, error) {
 //	    u := &User{}
 //	    return u, rows.Scan(&u.ID, &u.Name)
 //	})
 //	resp, _ := svc.List(ctx, req) // req is *gocrudv1.ListRequest
-package query
+package crud
 
 import (
 	"context"
@@ -35,6 +35,7 @@ import (
 	"fmt"
 
 	gocrudv1 "github.com/FlorinBalint/gocrud/proto/v1"
+	"github.com/FlorinBalint/gocrud/sqldialect"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -43,19 +44,10 @@ import (
 // Configuration
 // ---------------------------------------------------------------------------
 
-// BackendType identifies the SQL database backend.
-type BackendType int
-
-const (
-	// BackendPostgres selects the PostgreSQL query builder ($N placeholders).
-	BackendPostgres BackendType = iota + 1
-	// Future backends (MySQL, SQLite, …) will be added here.
-)
-
 // Config configures a [Service].
 type Config struct {
 	// Backend is the SQL dialect to use (required).
-	Backend BackendType
+	Backend sqldialect.BackendType
 
 	// Table is the SQL table this service queries (required).
 	// Must contain only letters, digits, and underscores.
@@ -124,25 +116,22 @@ type Service[T any] struct {
 	db      *sql.DB
 	cfg     Config
 	scanner RowScanner[T]
-	b       selectBuilder
+	b       sqldialect.Builder
 }
 
 // NewService constructs a Service for the given backend.
 // db must be an open, ready-to-use *sql.DB; the service does not close it.
 func NewService[T any](db *sql.DB, cfg Config, scanner RowScanner[T]) (*Service[T], error) {
 	if db == nil {
-		return nil, fmt.Errorf("query: db must not be nil")
+		return nil, fmt.Errorf("list: db must not be nil")
 	}
 	if cfg.Table == "" {
-		return nil, fmt.Errorf("query: Config.Table must not be empty")
+		return nil, fmt.Errorf("list: Config.Table must not be empty")
 	}
 
-	var b selectBuilder
-	switch cfg.Backend {
-	case BackendPostgres:
-		b = &postgresBuilder{}
-	default:
-		return nil, fmt.Errorf("query: unsupported backend %v", cfg.Backend)
+	b, err := sqldialect.ForBackend(cfg.Backend)
+	if err != nil {
+		return nil, fmt.Errorf("list: %w", err)
 	}
 
 	return &Service[T]{db: db, cfg: cfg, scanner: scanner, b: b}, nil
@@ -158,14 +147,14 @@ func NewService[T any](db *sql.DB, cfg Config, scanner RowScanner[T]) (*Service[
 func (s *Service[T]) List(ctx context.Context, req *gocrudv1.ListRequest) (*ListResponse[T], error) {
 	qHash, err := queryHash(req.GetFilter(), req.GetOrderBy())
 	if err != nil {
-		return nil, fmt.Errorf("query: hashing request: %w", err)
+		return nil, fmt.Errorf("list: hashing request: %w", err)
 	}
 
 	offset, pageSize, err := resolvePageParams(req.GetPagination(), qHash, s.cfg)
 	if err != nil {
 		// All pagination resolution errors are caused by an invalid or
 		// mismatched page token, which is caller error.
-		return nil, status.Errorf(codes.InvalidArgument, "query: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "list: %v", err)
 	}
 
 	includeTotal := req.GetIncludeTotal()
@@ -178,24 +167,24 @@ func (s *Service[T]) List(ctx context.Context, req *gocrudv1.ListRequest) (*List
 		fetchLimit = pageSize + 1
 	}
 
-	q := selectQuery{
-		table:        s.cfg.Table,
-		fields:       req.GetFields(),
-		filter:       req.GetFilter(),
-		orderBy:      req.GetOrderBy(),
-		limit:        fetchLimit,
-		offset:       offset,
-		includeTotal: includeTotal,
-	}
+	q := sqldialect.NewSelectQuery(
+		s.cfg.Table,
+		req.GetFields(),
+		req.GetFilter(),
+		req.GetOrderBy(),
+		fetchLimit,
+		offset,
+		includeTotal,
+	)
 
-	sqlStr, args, err := s.b.build(q)
+	sqlStr, args, err := s.b.BuildSelect(q)
 	if err != nil {
-		return nil, fmt.Errorf("query: building SQL: %w", err)
+		return nil, fmt.Errorf("list: building SQL: %w", err)
 	}
 
 	sqlRows, err := s.db.QueryContext(ctx, sqlStr, args...)
 	if err != nil {
-		return nil, fmt.Errorf("query: executing query: %w", err)
+		return nil, fmt.Errorf("list: executing query: %w", err)
 	}
 	defer sqlRows.Close()
 
@@ -213,12 +202,12 @@ func (s *Service[T]) List(ctx context.Context, req *gocrudv1.ListRequest) (*List
 	for sqlRows.Next() {
 		item, err := s.scanner(rowCursor)
 		if err != nil {
-			return nil, fmt.Errorf("query: scanning row: %w", err)
+			return nil, fmt.Errorf("list: scanning row: %w", err)
 		}
 		items = append(items, item)
 	}
 	if err := sqlRows.Err(); err != nil {
-		return nil, fmt.Errorf("query: reading rows: %w", err)
+		return nil, fmt.Errorf("list: reading rows: %w", err)
 	}
 
 	var totalSize int64

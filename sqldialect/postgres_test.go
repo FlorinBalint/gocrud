@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Tests are in package query (not query_test) to access the unexported
-// postgresBuilder and selectQuery types directly without going through the DB.
-package query
+// Tests are in package sqldialect (not sqldialect_test) to access the
+// unexported postgresBuilder and selectQuery types directly without going
+// through the DB.
+package sqldialect
 
 import (
 	"reflect"
@@ -133,7 +134,7 @@ func TestBuildSelect(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, _, err := b.build(tc.q)
+			got, _, err := b.BuildSelect(&tc.q)
 			if tc.wantErr {
 				if err == nil {
 					t.Error("expected error, got nil")
@@ -351,7 +352,7 @@ func TestBuildWhere(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, args, err := b.build(tc.q)
+			got, args, err := b.BuildSelect(&tc.q)
 			if tc.wantErr {
 				if err == nil {
 					t.Error("expected error, got nil")
@@ -402,7 +403,7 @@ func TestBuildOrderBy(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, _, err := b.build(tc.q)
+			got, _, err := b.BuildSelect(&tc.q)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -439,7 +440,7 @@ func TestBuildLimitOffset(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, args, err := b.build(tc.q)
+			got, args, err := b.BuildSelect(&tc.q)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -503,7 +504,7 @@ func TestBuildFull(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, args, err := b.build(tc.q)
+			got, args, err := b.BuildSelect(&tc.q)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}

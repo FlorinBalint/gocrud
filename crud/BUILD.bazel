@@ -1,0 +1,27 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "crud",
+    srcs = [
+        "pagination.go",
+        "service.go",
+    ],
+    importpath = "github.com/FlorinBalint/gocrud/crud",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/v1:query_go_proto",
+        "//sqldialect",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//status",
+        "@org_golang_google_protobuf//proto",
+    ],
+)
+
+go_test(
+    name = "crud_test",
+    srcs = ["pagination_test.go"],
+    embed = [":crud"],
+    deps = [
+        "//proto/v1:query_go_proto",
+    ],
+)

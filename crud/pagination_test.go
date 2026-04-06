@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package query
+package crud
 
 import (
 	"testing"
@@ -20,11 +20,43 @@ import (
 	gocrudv1 "github.com/FlorinBalint/gocrud/proto/v1"
 )
 
+// ---------------------------------------------------------------------------
+// Proto builder helpers (used by TestQueryHash)
+// ---------------------------------------------------------------------------
+
+func condFilter(field string, op gocrudv1.Operator, v *gocrudv1.Value) *gocrudv1.Filter {
+	return &gocrudv1.Filter{Filter: &gocrudv1.Filter_Condition{
+		Condition: &gocrudv1.Condition{Field: field, Op: op, Operand: &gocrudv1.Condition_Value{Value: v}},
+	}}
+}
+
+func andFilter(filters ...*gocrudv1.Filter) *gocrudv1.Filter {
+	return &gocrudv1.Filter{Filter: &gocrudv1.Filter_Composite{
+		Composite: &gocrudv1.CompositeFilter{Op: gocrudv1.CompositeFilter_AND, Filters: filters},
+	}}
+}
+
+func strVal(s string) *gocrudv1.Value {
+	return &gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: s}}
+}
+
+func intVal(i int64) *gocrudv1.Value {
+	return &gocrudv1.Value{Kind: &gocrudv1.Value_IntValue{IntValue: i}}
+}
+
+func orderBy(field string, dir gocrudv1.OrderBy_Direction) *gocrudv1.OrderBy {
+	return &gocrudv1.OrderBy{Field: field, Direction: dir}
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
 func TestToken(t *testing.T) {
 	tests := []struct {
-		name      string
-		token     offsetToken
-		wantErr   bool
+		name    string
+		token   offsetToken
+		wantErr bool
 	}{
 		{
 			name:  "round-trip simple",
@@ -203,8 +235,8 @@ func TestQueryHash(t *testing.T) {
 	obs := []*gocrudv1.OrderBy{orderBy("age", gocrudv1.OrderBy_ASC)}
 
 	tests := []struct {
-		name    string
-		run     func(t *testing.T)
+		name string
+		run  func(t *testing.T)
 	}{
 		{
 			name: "nil filter no order_by produces non-empty hash",
