@@ -31,7 +31,7 @@ import (
 )
 
 // b is the builder under test.
-var b = &postgresBuilder{}
+var b = newPostgresBuilder()
 
 // ---------------------------------------------------------------------------
 // Proto builder helpers
@@ -817,7 +817,7 @@ func TestBuildFull(t *testing.T) {
 		{
 			name: "filter + order + pagination",
 			q: selectQuery{
-				table:  "products",
+				table:   "products",
 				columns: []string{"id", "name", "price"},
 				filter: andFilter(
 					condFilter("price", gocrudv1.Operator_GREATER_THAN, floatVal(10.0)),
@@ -839,9 +839,9 @@ func TestBuildFull(t *testing.T) {
 		{
 			name: "filter + order + pagination + include_total",
 			q: selectQuery{
-				table:  "orders",
+				table:   "orders",
 				columns: []string{"id", "total"},
-				filter: condFilter("total", gocrudv1.Operator_GREATER_THAN, floatVal(50.0)),
+				filter:  condFilter("total", gocrudv1.Operator_GREATER_THAN, floatVal(50.0)),
 				orderBy: []*gocrudv1.OrderBy{
 					orderBy("total", gocrudv1.OrderBy_DESC),
 				},

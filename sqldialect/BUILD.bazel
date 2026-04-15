@@ -4,6 +4,8 @@ go_library(
     name = "sqldialect",
     srcs = [
         "builder.go",
+        "common.go",
+        "mysql.go",
         "postgres.go",
     ],
     importpath = "github.com/FlorinBalint/gocrud/sqldialect",
@@ -15,7 +17,10 @@ go_library(
 
 go_test(
     name = "sqldialect_test",
-    srcs = ["postgres_test.go"],
+    srcs = [
+        "mysql_test.go",
+        "postgres_test.go",
+    ],
     embed = [":sqldialect"],
     deps = [
         "//proto/v1:query_go_proto",

@@ -26,16 +26,17 @@ import (
 type BackendType int
 
 const (
-	// Postgres selects the PostgreSQL query builder ($N placeholders).
+	// Postgres selects the PostgreSQL query builder ($N placeholders, double-quoted identifiers).
 	Postgres BackendType = iota + 1
-	// Future backends (MySQL, SQLite, …) will be added here.
+	// MySQL selects the MySQL query builder (? placeholders, backtick-quoted identifiers).
+	MySQL
 )
 
 // SelectQuery is the fully-resolved internal representation of a SELECT that
 // is built by the list service after resolving pagination, then handed to a Builder.
 type SelectQuery interface {
 	Table() string
-	Columns() []string             // nil/empty → SELECT *
+	Columns() []string            // nil/empty → SELECT *
 	Filter() *gocrudv1.Filter     // nil → no WHERE clause
 	OrderBy() []*gocrudv1.OrderBy // nil/empty → no ORDER BY
 	Limit() int32                 // rows to fetch (already includes n+1 for has-next detection)
@@ -60,7 +61,9 @@ type Builder interface {
 func ForBackend(b BackendType) (Builder, error) {
 	switch b {
 	case Postgres:
-		return &postgresBuilder{}, nil
+		return newPostgresBuilder(), nil
+	case MySQL:
+		return newMySQLBuilder(), nil
 	default:
 		return nil, fmt.Errorf("sqldialect: unsupported backend %v", b)
 	}
@@ -131,7 +134,7 @@ func NewUpdateQuery(table string, updates []*gocrudv1.ColumnUpdate, filter *gocr
 // rejected row). The same columns and values drive both the insert and the
 // conflict update — no separate update list is required.
 type UpsertQuery interface {
-	InsertQuery                 // table, columns, values for the INSERT part
+	InsertQuery                // table, columns, values for the INSERT part
 	ConflictColumns() []string // columns defining the conflict target; must be non-empty
 }
 
@@ -201,13 +204,13 @@ type selectQuery struct {
 	includeTotal bool
 }
 
-func (q *selectQuery) Table() string                   { return q.table }
-func (q *selectQuery) Columns() []string               { return q.columns }
-func (q *selectQuery) Filter() *gocrudv1.Filter        { return q.filter }
-func (q *selectQuery) OrderBy() []*gocrudv1.OrderBy    { return q.orderBy }
-func (q *selectQuery) Limit() int32                    { return q.limit }
-func (q *selectQuery) Offset() int64                   { return q.offset }
-func (q *selectQuery) IncludeTotal() bool              { return q.includeTotal }
+func (q *selectQuery) Table() string                { return q.table }
+func (q *selectQuery) Columns() []string            { return q.columns }
+func (q *selectQuery) Filter() *gocrudv1.Filter     { return q.filter }
+func (q *selectQuery) OrderBy() []*gocrudv1.OrderBy { return q.orderBy }
+func (q *selectQuery) Limit() int32                 { return q.limit }
+func (q *selectQuery) Offset() int64                { return q.offset }
+func (q *selectQuery) IncludeTotal() bool           { return q.includeTotal }
 
 // NewSelectQuery constructs a SelectQuery with the given parameters.
 func NewSelectQuery(
