@@ -7,6 +7,7 @@ go_library(
         "common.go",
         "mysql.go",
         "postgres.go",
+        "sqlite.go",
     ],
     importpath = "github.com/FlorinBalint/gocrud/sqldialect",
     visibility = ["//visibility:public"],
@@ -20,6 +21,7 @@ go_test(
     srcs = [
         "mysql_test.go",
         "postgres_test.go",
+        "sqlite_test.go",
     ],
     embed = [":sqldialect"],
     deps = [

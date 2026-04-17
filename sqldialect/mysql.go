@@ -20,10 +20,12 @@ import (
 )
 
 // mysqlConfig is the dialect configuration for MySQL: backtick-quoted
-// identifiers and ? positional placeholders.
+// identifiers, ? positional placeholders, and rejection of IntervalValue
+// since MySQL has no native INTERVAL column type.
 var mysqlConfig = dialectConfig{
-	quoteIdent:  myQuoteIdent,
-	placeholder: func(_ int) string { return "?" },
+	quoteIdent:    myQuoteIdent,
+	placeholder:   func(_ int) string { return "?" },
+	validateValue: rejectIntervalValue,
 }
 
 // mysqlBuilder builds MySQL queries. It delegates all shared logic to the
@@ -88,7 +90,7 @@ func (b *mysqlBuilder) BuildUpsert(q UpsertQuery) (string, []any, error) {
 		if v == nil {
 			placeholders[i] = "DEFAULT"
 		} else {
-			native, err := valueToNative(v)
+			native, err := b.toNative(v)
 			if err != nil {
 				return "", nil, fmt.Errorf("column %q: %w", q.Columns()[i], err)
 			}

@@ -23,14 +23,14 @@ import (
 	gocrudv1 "github.com/FlorinBalint/gocrud/proto/v1"
 )
 
-// mb is the MySQL builder under test.
-var mb = newMySQLBuilder()
+// sb is the SQLite builder under test.
+var sb = newSQLiteBuilder()
 
 // ---------------------------------------------------------------------------
-// SELECT — verifies backtick quoting and ? placeholders
+// SELECT — verifies double-quoted identifiers and ? placeholders
 // ---------------------------------------------------------------------------
 
-func TestMySQLBuildSelect(t *testing.T) {
+func TestSQLiteBuildSelect(t *testing.T) {
 	tests := []struct {
 		name     string
 		q        selectQuery
@@ -41,29 +41,29 @@ func TestMySQLBuildSelect(t *testing.T) {
 		{
 			name:     "star no filter",
 			q:        selectQuery{table: "users", limit: 10},
-			wantSQL:  "SELECT * FROM `users` LIMIT ?",
+			wantSQL:  `SELECT * FROM "users" LIMIT ?`,
 			wantArgs: []any{int64(10)},
 		},
 		{
 			name:     "specific columns",
 			q:        selectQuery{table: "users", columns: []string{"id", "name"}, limit: 5},
-			wantSQL:  "SELECT `id`, `name` FROM `users` LIMIT ?",
+			wantSQL:  `SELECT "id", "name" FROM "users" LIMIT ?`,
 			wantArgs: []any{int64(5)},
 		},
 		{
 			name:     "include_total",
 			q:        selectQuery{table: "orders", limit: 10, includeTotal: true},
-			wantSQL:  "SELECT *, COUNT(*) OVER() AS _total_count FROM `orders` LIMIT ?",
+			wantSQL:  `SELECT *, COUNT(*) OVER() AS _total_count FROM "orders" LIMIT ?`,
 			wantArgs: []any{int64(10)},
 		},
 		{
-			name: "filter with ? placeholders",
+			name: "filter — ? placeholders, double-quoted identifiers",
 			q: selectQuery{
 				table:  "users",
 				filter: condFilter("age", gocrudv1.Operator_GREATER_THAN, intVal(18)),
 				limit:  10,
 			},
-			wantSQL:  "SELECT * FROM `users` WHERE `age` > ? LIMIT ?",
+			wantSQL:  `SELECT * FROM "users" WHERE "age" > ? LIMIT ?`,
 			wantArgs: []any{int64(18), int64(10)},
 		},
 		{
@@ -73,7 +73,7 @@ func TestMySQLBuildSelect(t *testing.T) {
 				filter: inFilter("status", gocrudv1.Operator_IN, strVal("active"), strVal("pending")),
 				limit:  10,
 			},
-			wantSQL:  "SELECT * FROM `users` WHERE `status` IN (?, ?) LIMIT ?",
+			wantSQL:  `SELECT * FROM "users" WHERE "status" IN (?, ?) LIMIT ?`,
 			wantArgs: []any{"active", "pending", int64(10)},
 		},
 		{
@@ -86,7 +86,7 @@ func TestMySQLBuildSelect(t *testing.T) {
 				),
 				limit: 5,
 			},
-			wantSQL:  "SELECT * FROM `products` WHERE (`price` > ? AND `deleted_at` IS NULL) LIMIT ?",
+			wantSQL:  `SELECT * FROM "products" WHERE ("price" > ? AND "deleted_at" IS NULL) LIMIT ?`,
 			wantArgs: []any{float64(10.0), int64(5)},
 		},
 		{
@@ -97,7 +97,7 @@ func TestMySQLBuildSelect(t *testing.T) {
 				limit:   10,
 				offset:  20,
 			},
-			wantSQL:  "SELECT * FROM `users` ORDER BY `name` ASC LIMIT ? OFFSET ?",
+			wantSQL:  `SELECT * FROM "users" ORDER BY "name" ASC LIMIT ? OFFSET ?`,
 			wantArgs: []any{int64(10), int64(20)},
 		},
 		{
@@ -105,15 +105,10 @@ func TestMySQLBuildSelect(t *testing.T) {
 			q:       selectQuery{table: "bad-table", limit: 10},
 			wantErr: true,
 		},
-		{
-			name:    "invalid column name",
-			q:       selectQuery{table: "users", columns: []string{"bad-col"}, limit: 10},
-			wantErr: true,
-		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, args, err := mb.BuildSelect(&tc.q)
+			got, args, err := sb.BuildSelect(&tc.q)
 			if tc.wantErr {
 				if err == nil {
 					t.Error("expected error, got nil")
@@ -132,7 +127,7 @@ func TestMySQLBuildSelect(t *testing.T) {
 // INSERT
 // ---------------------------------------------------------------------------
 
-func TestMySQLBuildInsert(t *testing.T) {
+func TestSQLiteBuildInsert(t *testing.T) {
 	tests := []struct {
 		name     string
 		q        insertQuery
@@ -147,7 +142,7 @@ func TestMySQLBuildInsert(t *testing.T) {
 				columns: []string{"name", "email", "age"},
 				values:  []*gocrudv1.Value{strVal("alice"), strVal("alice@example.com"), intVal(30)},
 			},
-			wantSQL:  "INSERT INTO `users` (`name`, `email`, `age`) VALUES (?, ?, ?)",
+			wantSQL:  `INSERT INTO "users" ("name", "email", "age") VALUES (?, ?, ?)`,
 			wantArgs: []any{"alice", "alice@example.com", int64(30)},
 		},
 		{
@@ -157,7 +152,7 @@ func TestMySQLBuildInsert(t *testing.T) {
 				columns: []string{"id", "name"},
 				values:  []*gocrudv1.Value{nil, strVal("bob")},
 			},
-			wantSQL:  "INSERT INTO `users` (`id`, `name`) VALUES (DEFAULT, ?)",
+			wantSQL:  `INSERT INTO "users" ("id", "name") VALUES (DEFAULT, ?)`,
 			wantArgs: []any{"bob"},
 		},
 		{
@@ -168,7 +163,7 @@ func TestMySQLBuildInsert(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, args, err := mb.BuildInsert(&tc.q)
+			got, args, err := sb.BuildInsert(&tc.q)
 			if tc.wantErr {
 				if err == nil {
 					t.Error("expected error, got nil")
@@ -187,7 +182,7 @@ func TestMySQLBuildInsert(t *testing.T) {
 // UPDATE
 // ---------------------------------------------------------------------------
 
-func TestMySQLBuildUpdate(t *testing.T) {
+func TestSQLiteBuildUpdate(t *testing.T) {
 	tests := []struct {
 		name     string
 		q        updateQuery
@@ -203,7 +198,7 @@ func TestMySQLBuildUpdate(t *testing.T) {
 					{Column: "name", Assignment: &gocrudv1.ColumnUpdate_Value{Value: strVal("alice")}},
 				},
 			},
-			wantSQL:  "UPDATE `users` SET `name` = ?",
+			wantSQL:  `UPDATE "users" SET "name" = ?`,
 			wantArgs: []any{"alice"},
 		},
 		{
@@ -216,7 +211,7 @@ func TestMySQLBuildUpdate(t *testing.T) {
 				},
 				filter: condFilter("id", gocrudv1.Operator_EQUAL, intVal(42)),
 			},
-			wantSQL:  "UPDATE `users` SET `name` = ?, `age` = ? WHERE `id` = ?",
+			wantSQL:  `UPDATE "users" SET "name" = ?, "age" = ? WHERE "id" = ?`,
 			wantArgs: []any{"bob", int64(30), int64(42)},
 		},
 		{
@@ -224,12 +219,12 @@ func TestMySQLBuildUpdate(t *testing.T) {
 			q: updateQuery{
 				table: "users",
 				updates: []*gocrudv1.ColumnUpdate{
-					{Column: "verified_at", Assignment: &gocrudv1.ColumnUpdate_UseDefault{UseDefault: true}},
+					{Column: "score", Assignment: &gocrudv1.ColumnUpdate_UseDefault{UseDefault: true}},
 					{Column: "name", Assignment: &gocrudv1.ColumnUpdate_Value{Value: strVal("carol")}},
 				},
 				filter: condFilter("id", gocrudv1.Operator_EQUAL, intVal(7)),
 			},
-			wantSQL:  "UPDATE `users` SET `verified_at` = DEFAULT, `name` = ? WHERE `id` = ?",
+			wantSQL:  `UPDATE "users" SET "score" = DEFAULT, "name" = ? WHERE "id" = ?`,
 			wantArgs: []any{"carol", int64(7)},
 		},
 		{
@@ -240,7 +235,7 @@ func TestMySQLBuildUpdate(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, args, err := mb.BuildUpdate(&tc.q)
+			got, args, err := sb.BuildUpdate(&tc.q)
 			if tc.wantErr {
 				if err == nil {
 					t.Error("expected error, got nil")
@@ -259,7 +254,7 @@ func TestMySQLBuildUpdate(t *testing.T) {
 // DELETE
 // ---------------------------------------------------------------------------
 
-func TestMySQLBuildDelete(t *testing.T) {
+func TestSQLiteBuildDelete(t *testing.T) {
 	tests := []struct {
 		name     string
 		q        deleteQuery
@@ -270,7 +265,7 @@ func TestMySQLBuildDelete(t *testing.T) {
 		{
 			name:     "single condition",
 			q:        deleteQuery{table: "users", filter: condFilter("id", gocrudv1.Operator_EQUAL, intVal(42))},
-			wantSQL:  "DELETE FROM `users` WHERE `id` = ?",
+			wantSQL:  `DELETE FROM "users" WHERE "id" = ?`,
 			wantArgs: []any{int64(42)},
 		},
 		{
@@ -282,7 +277,7 @@ func TestMySQLBuildDelete(t *testing.T) {
 					nullFilter("expired_at", gocrudv1.Operator_IS_NOT_NULL),
 				),
 			},
-			wantSQL:  "DELETE FROM `sessions` WHERE (`user_id` = ? AND `expired_at` IS NOT NULL)",
+			wantSQL:  `DELETE FROM "sessions" WHERE ("user_id" = ? AND "expired_at" IS NOT NULL)`,
 			wantArgs: []any{int64(7)},
 		},
 		{
@@ -293,7 +288,7 @@ func TestMySQLBuildDelete(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, args, err := mb.BuildDelete(&tc.q)
+			got, args, err := sb.BuildDelete(&tc.q)
 			if tc.wantErr {
 				if err == nil {
 					t.Error("expected error, got nil")
@@ -309,10 +304,10 @@ func TestMySQLBuildDelete(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// UPSERT — MySQL-specific ON DUPLICATE KEY UPDATE / INSERT IGNORE syntax
+// UPSERT — ON CONFLICT syntax (identical to PostgreSQL, but ? placeholders)
 // ---------------------------------------------------------------------------
 
-func TestMySQLBuildUpsert(t *testing.T) {
+func TestSQLiteBuildUpsert(t *testing.T) {
 	tests := []struct {
 		name     string
 		q        upsertQuery
@@ -321,14 +316,14 @@ func TestMySQLBuildUpsert(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name: "single conflict column, others updated via row alias",
+			name: "single conflict column, non-conflict columns updated via EXCLUDED",
 			q: upsertQuery{
 				table:        "users",
 				columns:      []string{"id", "name", "email"},
 				values:       []*gocrudv1.Value{intVal(1), strVal("alice"), strVal("alice@example.com")},
 				conflictCols: []string{"id"},
 			},
-			wantSQL:  "INSERT INTO `users` (`id`, `name`, `email`) VALUES (?, ?, ?) AS _new ON DUPLICATE KEY UPDATE `name` = _new.`name`, `email` = _new.`email`",
+			wantSQL:  `INSERT INTO "users" ("id", "name", "email") VALUES (?, ?, ?) ON CONFLICT ("id") DO UPDATE SET "name" = EXCLUDED."name", "email" = EXCLUDED."email"`,
 			wantArgs: []any{int64(1), "alice", "alice@example.com"},
 		},
 		{
@@ -339,7 +334,7 @@ func TestMySQLBuildUpsert(t *testing.T) {
 				values:       []*gocrudv1.Value{intVal(7), intVal(3), strVal("admin")},
 				conflictCols: []string{"user_id", "group_id"},
 			},
-			wantSQL:  "INSERT INTO `memberships` (`user_id`, `group_id`, `role`) VALUES (?, ?, ?) AS _new ON DUPLICATE KEY UPDATE `role` = _new.`role`",
+			wantSQL:  `INSERT INTO "memberships" ("user_id", "group_id", "role") VALUES (?, ?, ?) ON CONFLICT ("user_id", "group_id") DO UPDATE SET "role" = EXCLUDED."role"`,
 			wantArgs: []any{int64(7), int64(3), "admin"},
 		},
 		{
@@ -350,18 +345,18 @@ func TestMySQLBuildUpsert(t *testing.T) {
 				values:       []*gocrudv1.Value{intVal(5), strVal("bob"), nil},
 				conflictCols: []string{"id"},
 			},
-			wantSQL:  "INSERT INTO `users` (`id`, `name`, `created_at`) VALUES (?, ?, DEFAULT) AS _new ON DUPLICATE KEY UPDATE `name` = _new.`name`, `created_at` = _new.`created_at`",
+			wantSQL:  `INSERT INTO "users" ("id", "name", "created_at") VALUES (?, ?, DEFAULT) ON CONFLICT ("id") DO UPDATE SET "name" = EXCLUDED."name", "created_at" = EXCLUDED."created_at"`,
 			wantArgs: []any{int64(5), "bob"},
 		},
 		{
-			name: "all columns are conflict columns produces INSERT IGNORE",
+			name: "all columns are conflict columns produces DO NOTHING",
 			q: upsertQuery{
 				table:        "users",
 				columns:      []string{"id"},
 				values:       []*gocrudv1.Value{intVal(1)},
 				conflictCols: []string{"id"},
 			},
-			wantSQL:  "INSERT IGNORE INTO `users` (`id`) VALUES (?)",
+			wantSQL:  `INSERT INTO "users" ("id") VALUES (?) ON CONFLICT ("id") DO NOTHING`,
 			wantArgs: []any{int64(1)},
 		},
 		{
@@ -370,13 +365,8 @@ func TestMySQLBuildUpsert(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name:    "columns values length mismatch",
-			q:       upsertQuery{table: "users", columns: []string{"id", "name"}, values: []*gocrudv1.Value{intVal(1)}, conflictCols: []string{"id"}},
-			wantErr: true,
-		},
-		{
 			name:    "empty conflict columns",
-			q:       upsertQuery{table: "users", columns: []string{"id", "name"}, values: []*gocrudv1.Value{intVal(1), strVal("x")}},
+			q:       upsertQuery{table: "users", columns: []string{"id"}, values: []*gocrudv1.Value{intVal(1)}},
 			wantErr: true,
 		},
 		{
@@ -392,7 +382,7 @@ func TestMySQLBuildUpsert(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, args, err := mb.BuildUpsert(&tc.q)
+			got, args, err := sb.BuildUpsert(&tc.q)
 			if tc.wantErr {
 				if err == nil {
 					t.Error("expected error, got nil")
@@ -411,7 +401,7 @@ func TestMySQLBuildUpsert(t *testing.T) {
 // IntervalValue rejection
 // ---------------------------------------------------------------------------
 
-func TestMySQLRejectsIntervalValue(t *testing.T) {
+func TestSQLiteRejectsIntervalValue(t *testing.T) {
 	interval := &gocrudv1.Value{
 		Kind: &gocrudv1.Value_IntervalValue{
 			IntervalValue: durationpb.New(2*time.Hour + 30*time.Minute),
@@ -424,7 +414,7 @@ func TestMySQLRejectsIntervalValue(t *testing.T) {
 			filter: condFilter("duration", gocrudv1.Operator_LESS_THAN, interval),
 			limit:  10,
 		}
-		_, _, err := mb.BuildSelect(&q)
+		_, _, err := sb.BuildSelect(&q)
 		if err == nil {
 			t.Error("expected error for IntervalValue in SELECT, got nil")
 		}
@@ -436,7 +426,7 @@ func TestMySQLRejectsIntervalValue(t *testing.T) {
 			columns: []string{"duration"},
 			values:  []*gocrudv1.Value{interval},
 		}
-		_, _, err := mb.BuildInsert(&q)
+		_, _, err := sb.BuildInsert(&q)
 		if err == nil {
 			t.Error("expected error for IntervalValue in INSERT, got nil")
 		}
@@ -450,7 +440,7 @@ func TestMySQLRejectsIntervalValue(t *testing.T) {
 			},
 			filter: condFilter("id", gocrudv1.Operator_EQUAL, intVal(1)),
 		}
-		_, _, err := mb.BuildUpdate(&q)
+		_, _, err := sb.BuildUpdate(&q)
 		if err == nil {
 			t.Error("expected error for IntervalValue in UPDATE, got nil")
 		}
@@ -463,7 +453,7 @@ func TestMySQLRejectsIntervalValue(t *testing.T) {
 			values:       []*gocrudv1.Value{intVal(1), interval},
 			conflictCols: []string{"id"},
 		}
-		_, _, err := mb.BuildUpsert(&q)
+		_, _, err := sb.BuildUpsert(&q)
 		if err == nil {
 			t.Error("expected error for IntervalValue in UPSERT, got nil")
 		}
@@ -474,12 +464,12 @@ func TestMySQLRejectsIntervalValue(t *testing.T) {
 // ForBackend
 // ---------------------------------------------------------------------------
 
-func TestForBackendMySQL(t *testing.T) {
-	b, err := ForBackend(MySQL)
+func TestForBackendSQLite(t *testing.T) {
+	b, err := ForBackend(SQLite)
 	if err != nil {
-		t.Fatalf("ForBackend(MySQL) unexpected error: %v", err)
+		t.Fatalf("ForBackend(SQLite) unexpected error: %v", err)
 	}
 	if b == nil {
-		t.Fatal("ForBackend(MySQL) returned nil builder")
+		t.Fatal("ForBackend(SQLite) returned nil builder")
 	}
 }

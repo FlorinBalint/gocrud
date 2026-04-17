@@ -30,8 +30,12 @@ type dialectConfig struct {
 	// e.g., PostgreSQL: `"name"`, MySQL: "`name`".
 	quoteIdent func(name string) (string, error)
 	// placeholder returns the SQL placeholder for the Nth argument (1-based).
-	// e.g., PostgreSQL: "$1", "$2", …; MySQL always returns "?".
+	// e.g., PostgreSQL: "$1", "$2", …; MySQL/SQLite always return "?".
 	placeholder func(idx int) string
+	// validateValue, when non-nil, is called before converting a proto Value
+	// to a driver-native type. Return a non-nil error to reject value kinds
+	// that the backend does not support (e.g. SQLite rejects IntervalValue).
+	validateValue func(v *gocrudv1.Value) error
 }
 
 // baseBuilder contains the shared query-building logic parameterised by a
@@ -47,6 +51,18 @@ type baseBuilder struct {
 // of rows matching the WHERE clause before LIMIT/OFFSET is applied, without
 // requiring a separate query. Supported by PostgreSQL and MySQL 8.0+.
 const totalCountExpr = "COUNT(*) OVER() AS _total_count"
+
+// toNative runs the dialect's optional validateValue hook and then converts v
+// to a driver-native Go type. Use this instead of calling valueToNative directly
+// so that per-dialect type restrictions are enforced uniformly.
+func (b *baseBuilder) toNative(v *gocrudv1.Value) (any, error) {
+	if b.cfg.validateValue != nil {
+		if err := b.cfg.validateValue(v); err != nil {
+			return nil, err
+		}
+	}
+	return valueToNative(v)
+}
 
 // BuildSelect implements [Builder].
 func (b *baseBuilder) BuildSelect(q SelectQuery) (string, []any, error) {
@@ -123,7 +139,7 @@ func (b *baseBuilder) BuildInsert(q InsertQuery) (string, []any, error) {
 		if v == nil {
 			placeholders[i] = "DEFAULT"
 		} else {
-			native, err := valueToNative(v)
+			native, err := b.toNative(v)
 			if err != nil {
 				return "", nil, fmt.Errorf("column %q: %w", q.Columns()[i], err)
 			}
@@ -165,7 +181,7 @@ func (b *baseBuilder) BuildUpdate(q UpdateQuery) (string, []any, error) {
 		case *gocrudv1.ColumnUpdate_UseDefault:
 			setParts[i] = fmt.Sprintf("%s = DEFAULT", qc)
 		case *gocrudv1.ColumnUpdate_Value:
-			native, err := valueToNative(u.GetValue())
+			native, err := b.toNative(u.GetValue())
 			if err != nil {
 				return "", nil, fmt.Errorf("column %q: %w", u.GetColumn(), err)
 			}
@@ -280,7 +296,7 @@ func (b *baseBuilder) buildCondition(c *gocrudv1.Condition, idx int) (string, []
 		placeholders := make([]string, len(vl.GetValues()))
 		var setArgs []any
 		for i, v := range vl.GetValues() {
-			native, err := valueToNative(v)
+			native, err := b.toNative(v)
 			if err != nil {
 				return "", nil, idx, fmt.Errorf("column %q values[%d]: %w", c.GetColumn(), i, err)
 			}
@@ -303,7 +319,7 @@ func (b *baseBuilder) buildCondition(c *gocrudv1.Condition, idx int) (string, []
 		if v == nil {
 			return "", nil, idx, fmt.Errorf("column %q: operator %v requires a value", c.GetColumn(), c.GetOp())
 		}
-		native, err := valueToNative(v)
+		native, err := b.toNative(v)
 		if err != nil {
 			return "", nil, idx, fmt.Errorf("column %q: %w", c.GetColumn(), err)
 		}
@@ -388,6 +404,88 @@ func (b *baseBuilder) buildLimitOffset(limit int32, offset int64, idx int) (stri
 }
 
 // ---------------------------------------------------------------------------
+// ON CONFLICT upsert (PostgreSQL / SQLite)
+// ---------------------------------------------------------------------------
+
+// buildOnConflictUpsert generates INSERT … ON CONFLICT (conflict_columns) DO UPDATE SET …
+// using the dialect's quoting and placeholder style. Used by PostgreSQL and SQLite, which
+// share this syntax. If all columns are conflict columns the statement uses DO NOTHING.
+func (b *baseBuilder) buildOnConflictUpsert(q UpsertQuery) (string, []any, error) {
+	if len(q.Columns()) == 0 {
+		return "", nil, fmt.Errorf("UPSERT requires at least one column")
+	}
+	if len(q.Columns()) != len(q.Values()) {
+		return "", nil, fmt.Errorf("columns and values length mismatch: %d columns, %d values",
+			len(q.Columns()), len(q.Values()))
+	}
+	if len(q.ConflictColumns()) == 0 {
+		return "", nil, fmt.Errorf("UPSERT requires at least one conflict column")
+	}
+
+	quotedTable, err := b.cfg.quoteIdent(q.Table())
+	if err != nil {
+		return "", nil, fmt.Errorf("invalid table name: %w", err)
+	}
+
+	quotedCols := make([]string, len(q.Columns()))
+	for i, col := range q.Columns() {
+		qc, err := b.cfg.quoteIdent(col)
+		if err != nil {
+			return "", nil, fmt.Errorf("invalid column name: %w", err)
+		}
+		quotedCols[i] = qc
+	}
+
+	placeholders := make([]string, len(q.Values()))
+	var args []any
+	idx := 1
+	for i, v := range q.Values() {
+		if v == nil {
+			placeholders[i] = "DEFAULT"
+		} else {
+			native, err := b.toNative(v)
+			if err != nil {
+				return "", nil, fmt.Errorf("column %q: %w", q.Columns()[i], err)
+			}
+			placeholders[i] = b.cfg.placeholder(idx)
+			args = append(args, native)
+			idx++
+		}
+	}
+
+	quotedConflict := make([]string, len(q.ConflictColumns()))
+	for i, col := range q.ConflictColumns() {
+		qc, err := b.cfg.quoteIdent(col)
+		if err != nil {
+			return "", nil, fmt.Errorf("invalid conflict column name: %w", err)
+		}
+		quotedConflict[i] = qc
+	}
+
+	conflictSet := make(map[string]bool, len(q.ConflictColumns()))
+	for _, col := range q.ConflictColumns() {
+		conflictSet[col] = true
+	}
+	var setParts []string
+	for i, col := range q.Columns() {
+		if !conflictSet[col] {
+			setParts = append(setParts, fmt.Sprintf("%s = EXCLUDED.%s", quotedCols[i], quotedCols[i]))
+		}
+	}
+
+	colList := strings.Join(quotedCols, ", ")
+	valList := strings.Join(placeholders, ", ")
+	conflictList := strings.Join(quotedConflict, ", ")
+
+	if len(setParts) == 0 {
+		return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) DO NOTHING",
+			quotedTable, colList, valList, conflictList), args, nil
+	}
+	return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) DO UPDATE SET %s",
+		quotedTable, colList, valList, conflictList, strings.Join(setParts, ", ")), args, nil
+}
+
+// ---------------------------------------------------------------------------
 // Identifier validation
 // ---------------------------------------------------------------------------
 
@@ -440,6 +538,17 @@ func operatorSQL(op gocrudv1.Operator) (string, error) {
 // ---------------------------------------------------------------------------
 // Value → driver-native conversion
 // ---------------------------------------------------------------------------
+
+// rejectIntervalValue is a validateValue hook for backends that have no native
+// INTERVAL column type (MySQL, SQLite). PostgreSQL supports INTERVAL natively
+// so it does not set this hook.
+func rejectIntervalValue(v *gocrudv1.Value) error {
+	if _, ok := v.GetKind().(*gocrudv1.Value_IntervalValue); ok {
+		return fmt.Errorf("this backend does not support INTERVAL values; " +
+			"store the duration as an IntValue (microseconds) or StringValue instead")
+	}
+	return nil
+}
 
 // valueToNative converts a proto [gocrudv1.Value] to a Go type accepted by
 // database/sql drivers as a query argument.

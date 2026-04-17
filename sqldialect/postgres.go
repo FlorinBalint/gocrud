@@ -14,10 +14,7 @@
 
 package sqldialect
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
 
 // postgresConfig is the dialect configuration for PostgreSQL: double-quoted
 // identifiers and $N positional placeholders.
@@ -40,92 +37,10 @@ func newPostgresBuilder() *postgresBuilder {
 }
 
 // BuildUpsert implements [Builder] for PostgreSQL.
-// Generates INSERT … ON CONFLICT (conflict_columns) DO UPDATE SET … where
-// every non-conflict column is updated to its EXCLUDED value. If all columns
-// are conflict columns the statement becomes … DO NOTHING.
+// Delegates to buildOnConflictUpsert, which generates
+// INSERT … ON CONFLICT (conflict_columns) DO UPDATE SET … (or DO NOTHING).
 func (b *postgresBuilder) BuildUpsert(q UpsertQuery) (string, []any, error) {
-	if len(q.Columns()) == 0 {
-		return "", nil, fmt.Errorf("UPSERT requires at least one column")
-	}
-	if len(q.Columns()) != len(q.Values()) {
-		return "", nil, fmt.Errorf("columns and values length mismatch: %d columns, %d values",
-			len(q.Columns()), len(q.Values()))
-	}
-	if len(q.ConflictColumns()) == 0 {
-		return "", nil, fmt.Errorf("UPSERT requires at least one conflict column")
-	}
-
-	quotedTable, err := b.cfg.quoteIdent(q.Table())
-	if err != nil {
-		return "", nil, fmt.Errorf("invalid table name: %w", err)
-	}
-
-	quotedCols := make([]string, len(q.Columns()))
-	for i, col := range q.Columns() {
-		qc, err := b.cfg.quoteIdent(col)
-		if err != nil {
-			return "", nil, fmt.Errorf("invalid column name: %w", err)
-		}
-		quotedCols[i] = qc
-	}
-
-	placeholders := make([]string, len(q.Values()))
-	var args []any
-	idx := 1
-	for i, v := range q.Values() {
-		if v == nil {
-			placeholders[i] = "DEFAULT"
-		} else {
-			native, err := valueToNative(v)
-			if err != nil {
-				return "", nil, fmt.Errorf("column %q: %w", q.Columns()[i], err)
-			}
-			placeholders[i] = b.cfg.placeholder(idx)
-			args = append(args, native)
-			idx++
-		}
-	}
-
-	quotedConflict := make([]string, len(q.ConflictColumns()))
-	for i, col := range q.ConflictColumns() {
-		qc, err := b.cfg.quoteIdent(col)
-		if err != nil {
-			return "", nil, fmt.Errorf("invalid conflict column name: %w", err)
-		}
-		quotedConflict[i] = qc
-	}
-
-	conflictSet := make(map[string]bool, len(q.ConflictColumns()))
-	for _, col := range q.ConflictColumns() {
-		conflictSet[col] = true
-	}
-	var setParts []string
-	for i, col := range q.Columns() {
-		if !conflictSet[col] {
-			setParts = append(setParts, fmt.Sprintf("%s = EXCLUDED.%s", quotedCols[i], quotedCols[i]))
-		}
-	}
-
-	var sql string
-	if len(setParts) == 0 {
-		sql = fmt.Sprintf(
-			"INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) DO NOTHING",
-			quotedTable,
-			strings.Join(quotedCols, ", "),
-			strings.Join(placeholders, ", "),
-			strings.Join(quotedConflict, ", "),
-		)
-	} else {
-		sql = fmt.Sprintf(
-			"INSERT INTO %s (%s) VALUES (%s) ON CONFLICT (%s) DO UPDATE SET %s",
-			quotedTable,
-			strings.Join(quotedCols, ", "),
-			strings.Join(placeholders, ", "),
-			strings.Join(quotedConflict, ", "),
-			strings.Join(setParts, ", "),
-		)
-	}
-	return sql, args, nil
+	return b.buildOnConflictUpsert(q)
 }
 
 // pgQuoteIdent validates name and returns it double-quoted as a PostgreSQL identifier.

@@ -30,6 +30,9 @@ const (
 	Postgres BackendType = iota + 1
 	// MySQL selects the MySQL query builder (? placeholders, backtick-quoted identifiers).
 	MySQL
+	// SQLite selects the SQLite query builder (? placeholders, double-quoted identifiers,
+	// ON CONFLICT upsert syntax). IntervalValue is rejected; use IntValue (microseconds) instead.
+	SQLite
 )
 
 // SelectQuery is the fully-resolved internal representation of a SELECT that
@@ -42,31 +45,6 @@ type SelectQuery interface {
 	Limit() int32                 // rows to fetch (already includes n+1 for has-next detection)
 	Offset() int64
 	IncludeTotal() bool // when true, appends COUNT(*) OVER() as the last SELECT column
-}
-
-// Builder translates query values into SQL strings and positional arguments.
-// Implementations must:
-//   - Validate all identifier names (table, columns) to prevent SQL injection.
-//   - Use $1, $2, … positional placeholders for all values.
-//   - Never interpolate values into the SQL string.
-type Builder interface {
-	BuildSelect(q SelectQuery) (sql string, args []any, err error)
-	BuildInsert(q InsertQuery) (sql string, args []any, err error)
-	BuildUpdate(q UpdateQuery) (sql string, args []any, err error)
-	BuildUpsert(q UpsertQuery) (sql string, args []any, err error)
-	BuildDelete(q DeleteQuery) (sql string, args []any, err error)
-}
-
-// ForBackend returns a Builder for the given backend dialect.
-func ForBackend(b BackendType) (Builder, error) {
-	switch b {
-	case Postgres:
-		return newPostgresBuilder(), nil
-	case MySQL:
-		return newMySQLBuilder(), nil
-	default:
-		return nil, fmt.Errorf("sqldialect: unsupported backend %v", b)
-	}
 }
 
 // InsertQuery is the fully-resolved internal representation of an INSERT handed
@@ -230,5 +208,32 @@ func NewSelectQuery(
 		limit:        limit,
 		offset:       offset,
 		includeTotal: includeTotal,
+	}
+}
+
+// Builder translates query values into SQL strings and positional arguments.
+// Implementations must:
+//   - Validate all identifier names (table, columns) to prevent SQL injection.
+//   - Use $1, $2, … positional placeholders for all values.
+//   - Never interpolate values into the SQL string.
+type Builder interface {
+	BuildSelect(q SelectQuery) (sql string, args []any, err error)
+	BuildInsert(q InsertQuery) (sql string, args []any, err error)
+	BuildUpdate(q UpdateQuery) (sql string, args []any, err error)
+	BuildUpsert(q UpsertQuery) (sql string, args []any, err error)
+	BuildDelete(q DeleteQuery) (sql string, args []any, err error)
+}
+
+// ForBackend returns a Builder for the given backend dialect.
+func ForBackend(b BackendType) (Builder, error) {
+	switch b {
+	case Postgres:
+		return newPostgresBuilder(), nil
+	case MySQL:
+		return newMySQLBuilder(), nil
+	case SQLite:
+		return newSQLiteBuilder(), nil
+	default:
+		return nil, fmt.Errorf("sqldialect: unsupported backend %v", b)
 	}
 }
