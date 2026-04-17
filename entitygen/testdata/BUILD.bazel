@@ -1,0 +1,31 @@
+load("@rules_go//go:def.bzl", "go_library")
+load("@rules_go//proto:def.bzl", "go_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
+filegroup(
+    name = "test_files",
+    srcs = glob(["*.proto"]),
+    visibility = ["//visibility:public"],
+)
+
+proto_library(
+    name = "testdata_proto",
+    srcs = ["entities.proto"],
+    visibility = ["//visibility:public"],
+    deps = ["//proto/entity:options_proto"],
+)
+
+go_proto_library(
+    name = "testdata_go_proto",
+    importpath = "github.com/FlorinBalint/gocrud/entitygen/testdata",
+    proto = ":testdata_proto",
+    visibility = ["//visibility:public"],
+    deps = ["//proto/entity:options_go_proto"],
+)
+
+go_library(
+    name = "testdata",
+    embed = [":testdata_go_proto"],
+    importpath = "github.com/FlorinBalint/gocrud/entitygen/testdata",
+    visibility = ["//visibility:public"],
+)

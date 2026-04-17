@@ -1,0 +1,147 @@
+// Copyright 2026 Florin Balint
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// Package entitygen generates protobuf service definitions and request/response
+// messages for entities annotated with gocrud entity options.
+package entitygen
+
+import (
+	"bytes"
+	"fmt"
+	"sort"
+	"strings"
+	"unicode"
+
+	"github.com/FlorinBalint/gocrud/proto/entity"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/types/descriptorpb"
+)
+
+// KeyField describes a field that is part of the entity's primary key.
+type KeyField struct {
+	// Name is the proto field name (e.g., "user_id").
+	Name string
+	// Type is the proto type name (e.g., "string", "int64").
+	Type string
+	// Order is the position in the composite primary key (1-indexed).
+	Order int32
+}
+
+// snakeCase converts CamelCase to snake_case.
+func snakeCase(s string) string {
+	var result strings.Builder
+	runes := []rune(s)
+	for i, r := range runes {
+		if unicode.IsUpper(r) {
+			if i > 0 {
+				prev := runes[i-1]
+				if unicode.IsLower(prev) {
+					result.WriteRune('_')
+				} else if unicode.IsUpper(prev) && i+1 < len(runes) && unicode.IsLower(runes[i+1]) {
+					result.WriteRune('_')
+				}
+			}
+			result.WriteRune(unicode.ToLower(r))
+		} else {
+			result.WriteRune(r)
+		}
+	}
+	return result.String()
+}
+
+// GenerateServiceProto generates the full .proto file content with CRUD
+// messages and service definition for the given entity message descriptor.
+func GenerateServiceProto(desc protoreflect.MessageDescriptor) (string, error) {
+	if desc == nil {
+		return "", fmt.Errorf("entitygen: message descriptor must not be nil")
+	}
+
+	name := string(desc.Name())
+	if name == "" {
+		return "", fmt.Errorf("entitygen: entity name must not be empty")
+	}
+
+	isEntity, _ := proto.GetExtension(desc.Options(), entity.E_Entity).(bool)
+	if !isEntity {
+		return "", fmt.Errorf("entitygen: message %q is not marked as an entity", name)
+	}
+
+	file := desc.ParentFile()
+	if file == nil {
+		return "", fmt.Errorf("entitygen: parent file must not be nil")
+	}
+
+	pkg := string(file.Package())
+	if pkg == "" {
+		return "", fmt.Errorf("entitygen: package must not be empty")
+	}
+
+	sourceFile := file.Path()
+	if sourceFile == "" {
+		return "", fmt.Errorf("entitygen: source file must not be empty")
+	}
+
+	fileOpts, ok := file.Options().(*descriptorpb.FileOptions)
+	var goPackage string
+	if ok && fileOpts != nil {
+		goPackage = fileOpts.GetGoPackage()
+	}
+	if goPackage == "" {
+		return "", fmt.Errorf("entitygen: go_package must not be empty")
+	}
+
+	var keyFields []KeyField
+	fields := desc.Fields()
+	for i := 0; i < fields.Len(); i++ {
+		f := fields.Get(i)
+		fOpts := f.Options()
+		if proto.HasExtension(fOpts, entity.E_PrimaryKey) {
+			if order, ok := proto.GetExtension(fOpts, entity.E_PrimaryKey).(int32); ok && order > 0 {
+				keyFields = append(keyFields, KeyField{
+					Name:  string(f.Name()),
+					Type:  f.Kind().String(),
+					Order: order,
+				})
+			}
+		}
+	}
+
+	// Sort key fields by order.
+	keys := make([]KeyField, len(keyFields))
+	copy(keys, keyFields)
+	sort.Slice(keys, func(i, j int) bool { return keys[i].Order < keys[j].Order })
+
+	data := struct {
+		Name       string
+		Package    string
+		GoPackage  string
+		SourceFile string
+		SnakeName  string
+		SortedKeys []KeyField
+	}{
+		Name:       name,
+		Package:    pkg,
+		GoPackage:  goPackage,
+		SourceFile: sourceFile,
+		SnakeName:  snakeCase(name),
+		SortedKeys: keys,
+	}
+
+	var buf bytes.Buffer
+	if err := serviceTmpl.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("entitygen: executing template: %w", err)
+	}
+	return buf.String(), nil
+}

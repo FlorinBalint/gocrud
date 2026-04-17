@@ -1,0 +1,33 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "entitygen",
+    srcs = [
+        "entitygen.go",
+        "template.go",
+    ],
+    importpath = "github.com/FlorinBalint/gocrud/entitygen",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/entity:options_go_proto",
+        "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//types/descriptorpb",
+    ],
+)
+
+go_test(
+    name = "entitygen_test",
+    srcs = ["entitygen_test.go"],
+    data = ["//entitygen/testdata:test_files"],
+    embed = [":entitygen"],
+    deps = [
+        "//entitygen/testdata",
+        "//proto/entity:options_go_proto",
+        "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//reflect/protodesc",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//reflect/protoregistry",
+        "@org_golang_google_protobuf//types/descriptorpb",
+    ],
+)

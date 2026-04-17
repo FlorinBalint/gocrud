@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package testdata.v1;
+
+option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata";
+
+import "proto/entity/options.proto";
+
+message RealUser {
+  option (gocrud.entity.entity) = true;
+
+  string id = 1 [(gocrud.entity.primary_key) = 1];
+  string email = 2;
+}
