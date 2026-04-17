@@ -1,0 +1,58 @@
+// Copyright 2026 Florin Balint
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package gocrud.entity;
+
+import "google/protobuf/descriptor.proto";
+
+option go_package = "github.com/FlorinBalint/gocrud/proto/entity;entity";
+
+// Method enumerates the CRUD operations that can be generated for an entity.
+enum Method {
+  METHOD_UNSPECIFIED = 0;
+  CREATE = 1;  // Insert
+  GET    = 2;  // Select by primary key
+  UPDATE = 3;  // Update by primary key
+  DELETE = 4;  // Delete by primary key
+  LIST   = 5;  // Select with filtering, ordering, and pagination
+  UPSERT = 6;  // Insert or update on primary key conflict
+}
+
+extend google.protobuf.MessageOptions {
+  // Mark a protobuf message as a database entity.
+  // Only messages with this option set will have CRUD code generated.
+  bool entity = 50000;
+
+  // Override the SQL table name for this entity.
+  // If unset, the table name is derived from the message name.
+  string table = 50001;
+
+  // The CRUD methods to generate for this entity.
+  // If empty, all methods are generated.
+  repeated Method methods = 50002;
+}
+
+extend google.protobuf.FieldOptions {
+  // Mark a field as part of the entity's primary key.
+  // The value indicates the field's position in a composite primary key
+  // (e.g. 1 for the first part, 2 for the second, etc.).
+  // A value of 0 (or unset) means the field is not part of the primary key.
+  int32 primary_key = 50001;
+
+  // Override the SQL column name mapped to this field.
+  // If unset, the column name is derived from the proto field name.
+  string db_column = 50002;
+}
