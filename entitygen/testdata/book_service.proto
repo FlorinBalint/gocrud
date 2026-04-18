@@ -52,6 +52,17 @@ message UpdateBookRequest {
 
   // The list of fields to update.
   google.protobuf.FieldMask update_mask = 2;
+
+}
+
+// UpsertBookRequest is the request message for BookService.UpsertBook.
+message UpsertBookRequest {
+  // The Book resource to upsert.
+  Book book = 1;
+
+  // The list of fields to update.
+  google.protobuf.FieldMask update_mask = 2;
+
 }
 
 // BookService provides CRUD operations for Book entities.
@@ -67,4 +78,7 @@ service BookService {
 
   // UpdateBook updates a Book.
   rpc UpdateBook(UpdateBookRequest) returns (Book);
+
+  // UpsertBook upserts a Book.
+  rpc UpsertBook(UpsertBookRequest) returns (Book);
 }

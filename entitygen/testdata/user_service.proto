@@ -55,6 +55,17 @@ message UpdateUserRequest {
 
   // The list of fields to update.
   google.protobuf.FieldMask update_mask = 2;
+
+}
+
+// UpsertUserRequest is the request message for UserService.UpsertUser.
+message UpsertUserRequest {
+  // The User resource to upsert.
+  User user = 1;
+
+  // The list of fields to update.
+  google.protobuf.FieldMask update_mask = 2;
+
 }
 
 // UserService provides CRUD operations for User entities.
@@ -70,4 +81,7 @@ service UserService {
 
   // UpdateUser updates a User.
   rpc UpdateUser(UpdateUserRequest) returns (User);
+
+  // UpsertUser upserts a User.
+  rpc UpsertUser(UpsertUserRequest) returns (User);
 }

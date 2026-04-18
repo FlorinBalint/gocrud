@@ -17,7 +17,7 @@ import "{{.SourceFile}}";
 {{- if .HasMethod "LIST"}}
 import "proto/v1/query.proto";
 {{- end}}
-{{- if .HasMethod "UPDATE"}}
+{{- if or (.HasMethod "UPDATE") (.HasMethod "UPSERT")}}
 import "google/protobuf/field_mask.proto";
 {{- end}}
 
@@ -65,8 +65,21 @@ message Update{{.Name}}Request {
 
   // The list of fields to update.
   google.protobuf.FieldMask update_mask = 2;
-{{- if .HasEtag}}
+{{if .HasEtag}}
+  // The etag for concurrency control.
+  // If provided, the update will only succeed if the entity's current etag matches this value.
+  string etag = 3;
+{{- end}}
+}
+{{end}}{{if .HasMethod "UPSERT"}}
+// Upsert{{.Name}}Request is the request message for {{.Name}}Service.Upsert{{.Name}}.
+message Upsert{{.Name}}Request {
+  // The {{.Name}} resource to upsert.
+  {{.Name}} {{.SnakeName}} = 1;
 
+  // The list of fields to update.
+  google.protobuf.FieldMask update_mask = 2;
+{{if .HasEtag}}
   // The etag for concurrency control.
   // If provided, the update will only succeed if the entity's current etag matches this value.
   string etag = 3;
@@ -93,6 +106,11 @@ service {{.Name}}Service {
 
   // Update{{.Name}} updates a {{.Name}}.
   rpc Update{{.Name}}(Update{{.Name}}Request) returns ({{.Name}});
+{{- end}}
+{{- if .HasMethod "UPSERT"}}
+
+  // Upsert{{.Name}} upserts a {{.Name}}.
+  rpc Upsert{{.Name}}(Upsert{{.Name}}Request) returns ({{.Name}});
 {{- end}}
 }
 `

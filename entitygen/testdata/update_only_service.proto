@@ -16,6 +16,7 @@ message UpdateUpdateOnlyUserRequest {
 
   // The list of fields to update.
   google.protobuf.FieldMask update_mask = 2;
+
 }
 
 // UpdateOnlyUserService provides CRUD operations for UpdateOnlyUser entities.

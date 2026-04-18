@@ -52,6 +52,17 @@ message UpdateRealUserRequest {
 
   // The list of fields to update.
   google.protobuf.FieldMask update_mask = 2;
+
+}
+
+// UpsertRealUserRequest is the request message for RealUserService.UpsertRealUser.
+message UpsertRealUserRequest {
+  // The RealUser resource to upsert.
+  RealUser real_user = 1;
+
+  // The list of fields to update.
+  google.protobuf.FieldMask update_mask = 2;
+
 }
 
 // RealUserService provides CRUD operations for RealUser entities.
@@ -67,4 +78,7 @@ service RealUserService {
 
   // UpdateRealUser updates a RealUser.
   rpc UpdateRealUser(UpdateRealUserRequest) returns (RealUser);
+
+  // UpsertRealUser upserts a RealUser.
+  rpc UpsertRealUser(UpsertRealUserRequest) returns (RealUser);
 }

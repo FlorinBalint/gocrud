@@ -48,3 +48,10 @@ message UpdateWithEtagUser {
 
   string id = 1 [(gocrud.entity.primary_key) = 1];
 }
+
+message UpsertOnlyUser {
+  option (gocrud.entity.entity) = true;
+  option (gocrud.entity.methods) = UPSERT;
+
+  string id = 1 [(gocrud.entity.primary_key) = 1];
+}
