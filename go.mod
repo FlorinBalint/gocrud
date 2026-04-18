@@ -9,6 +9,7 @@ require (
 )
 
 require (
+	github.com/google/go-cmp v0.7.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	google.golang.org/genproto v0.0.0-20260401024825-9d38bb4040a9 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260401001100-f93e5f3e9f0f // indirect

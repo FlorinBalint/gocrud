@@ -12,3 +12,17 @@ message RealUser {
   string id = 1 [(gocrud.entity.primary_key) = 1];
   string email = 2;
 }
+
+message CreateOnlyUser {
+  option (gocrud.entity.entity) = true;
+  option (gocrud.entity.methods) = CREATE;
+
+  string id = 1 [(gocrud.entity.primary_key) = 1];
+}
+
+message GetOnlyUser {
+  option (gocrud.entity.entity) = true;
+  option (gocrud.entity.methods) = GET;
+
+  string id = 1 [(gocrud.entity.primary_key) = 1];
+}

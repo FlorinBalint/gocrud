@@ -39,6 +39,36 @@ type KeyField struct {
 	Order int32
 }
 
+// templateData holds the data passed to the service generator template.
+type templateData struct {
+	Name       string
+	Package    string
+	GoPackage  string
+	SourceFile string
+	SnakeName  string
+	SortedKeys []KeyField
+	Methods    []entity.Method
+}
+
+// HasMethod checks if a specific method should be generated.
+// If no methods are explicitly specified, all methods are generated.
+func (d templateData) HasMethod(m string) bool {
+	if len(d.Methods) == 0 {
+		return true
+	}
+	val, ok := entity.Method_value[m]
+	if !ok {
+		return false
+	}
+	target := entity.Method(val)
+	for _, method := range d.Methods {
+		if method == target {
+			return true
+		}
+	}
+	return false
+}
+
 // snakeCase converts CamelCase to snake_case.
 func snakeCase(s string) string {
 	var result strings.Builder
@@ -123,20 +153,19 @@ func GenerateServiceProto(desc protoreflect.MessageDescriptor) (string, error) {
 	copy(keys, keyFields)
 	sort.Slice(keys, func(i, j int) bool { return keys[i].Order < keys[j].Order })
 
-	data := struct {
-		Name       string
-		Package    string
-		GoPackage  string
-		SourceFile string
-		SnakeName  string
-		SortedKeys []KeyField
-	}{
+	var methods []entity.Method
+	if mExt, ok := proto.GetExtension(desc.Options(), entity.E_Methods).([]entity.Method); ok {
+		methods = mExt
+	}
+
+	data := templateData{
 		Name:       name,
 		Package:    pkg,
 		GoPackage:  goPackage,
 		SourceFile: sourceFile,
 		SnakeName:  snakeCase(name),
 		SortedKeys: keys,
+		Methods:    methods,
 	}
 
 	var buf bytes.Buffer

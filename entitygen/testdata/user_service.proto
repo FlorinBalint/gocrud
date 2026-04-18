@@ -8,6 +8,12 @@ import "mypackage/v1/user.proto";
 
 option go_package = "github.com/example/mypackage/v1;mypackagev1";
 
+// GetUserRequest is the request message for UserService.GetUser.
+message GetUserRequest {
+  // The name of the resource to retrieve.
+  string name = 1;
+}
+
 // CreateUserRequest is the request message for UserService.CreateUser.
 message CreateUserRequest {
   // The parent resource where the User will be created.
@@ -25,6 +31,9 @@ message CreateUserRequest {
 
 // UserService provides CRUD operations for User entities.
 service UserService {
+  // GetUser retrieves a User by its resource name.
+  rpc GetUser(GetUserRequest) returns (User);
+
   // CreateUser creates a new User.
   rpc CreateUser(CreateUserRequest) returns (User);
 }

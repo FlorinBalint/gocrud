@@ -1,3 +1,4 @@
+load("@protobuf//bazel:proto_library.bzl", "proto_library")
 load("@rules_proto//proto:defs.bzl", "ProtoInfo")
 
 def _grpc_crud_service_impl(ctx):
@@ -47,7 +48,7 @@ def grpc_crud_service(name, message, proto, out = None, **kwargs):
         out = out,
     )
 
-    native.proto_library(
+    proto_library(
         name = name,
         srcs = [out],
         deps = [proto],

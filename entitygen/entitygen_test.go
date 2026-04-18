@@ -21,6 +21,7 @@ import (
 
 	"github.com/FlorinBalint/gocrud/entitygen/testdata"
 	"github.com/FlorinBalint/gocrud/proto/entity"
+	"github.com/google/go-cmp/cmp"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/reflect/protodesc"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -229,30 +230,43 @@ func TestGenerateServiceProto(t *testing.T) {
 			}
 
 			want := readGolden(t, tt.goldenFile)
-			if got != want {
-				t.Errorf("output mismatch for %s\n--- got ---\n%s\n--- want ---\n%s", tt.goldenFile, got, want)
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("output mismatch for %s (-want +got):\n%s", tt.goldenFile, diff)
 			}
 		})
 	}
 }
 
 func TestGenerateServiceProto_RealProto(t *testing.T) {
-	desc := testdata.File_entitygen_testdata_entities_proto.Messages().ByName("RealUser")
-	if desc == nil {
-		t.Fatal("RealUser descriptor not found in testdata proto")
+	tests := []struct {
+		message string
+		golden  string
+	}{
+		{"RealUser", "realuser_service.proto"},
+		{"CreateOnlyUser", "create_only_service.proto"},
+		{"GetOnlyUser", "get_only_service.proto"},
 	}
 
-	got, err := GenerateServiceProto(desc)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
+	for _, tt := range tests {
+		t.Run(tt.message, func(t *testing.T) {
+			desc := testdata.File_entitygen_testdata_entities_proto.Messages().ByName(protoreflect.Name(tt.message))
+			if desc == nil {
+				t.Fatalf("%s descriptor not found in testdata proto", tt.message)
+			}
 
-	if got == "" {
-		t.Error("expected non-empty service proto output")
-	}
+			got, err := GenerateServiceProto(desc)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
 
-	want := readGolden(t, "realuser_service.proto")
-	if got != want {
-		t.Errorf("output mismatch for realuser_service.proto\n--- got ---\n%s\n--- want ---\n%s", got, want)
+			if got == "" {
+				t.Error("expected non-empty service proto output")
+			}
+
+			want := readGolden(t, tt.golden)
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("output mismatch for %s (-want +got):\n%s", tt.golden, diff)
+			}
+		})
 	}
 }

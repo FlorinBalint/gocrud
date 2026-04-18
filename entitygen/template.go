@@ -16,7 +16,13 @@ package {{.Package}};
 import "{{.SourceFile}}";
 
 option go_package = "{{.GoPackage}}";
-
+{{if .HasMethod "GET"}}
+// Get{{.Name}}Request is the request message for {{.Name}}Service.Get{{.Name}}.
+message Get{{.Name}}Request {
+  // The name of the resource to retrieve.
+  string name = 1;
+}
+{{end}}{{if .HasMethod "CREATE"}}
 // Create{{.Name}}Request is the request message for {{.Name}}Service.Create{{.Name}}.
 message Create{{.Name}}Request {
   // The parent resource where the {{.Name}} will be created.
@@ -28,11 +34,18 @@ message Create{{.Name}}Request {
   // The {{.Name}} resource to create.
   {{.Name}} {{.SnakeName}} = {{add 2 (len .SortedKeys)}};
 }
-
+{{end}}
 // {{.Name}}Service provides CRUD operations for {{.Name}} entities.
 service {{.Name}}Service {
+{{- if .HasMethod "GET"}}
+  // Get{{.Name}} retrieves a {{.Name}} by its resource name.
+  rpc Get{{.Name}}(Get{{.Name}}Request) returns ({{.Name}});
+{{- end}}
+{{- if .HasMethod "CREATE"}}
+
   // Create{{.Name}} creates a new {{.Name}}.
   rpc Create{{.Name}}(Create{{.Name}}Request) returns ({{.Name}});
+{{- end}}
 }
 `
 

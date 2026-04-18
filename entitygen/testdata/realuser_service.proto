@@ -8,6 +8,12 @@ import "entitygen/testdata/entities.proto";
 
 option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata";
 
+// GetRealUserRequest is the request message for RealUserService.GetRealUser.
+message GetRealUserRequest {
+  // The name of the resource to retrieve.
+  string name = 1;
+}
+
 // CreateRealUserRequest is the request message for RealUserService.CreateRealUser.
 message CreateRealUserRequest {
   // The parent resource where the RealUser will be created.
@@ -22,6 +28,9 @@ message CreateRealUserRequest {
 
 // RealUserService provides CRUD operations for RealUser entities.
 service RealUserService {
+  // GetRealUser retrieves a RealUser by its resource name.
+  rpc GetRealUser(GetRealUserRequest) returns (RealUser);
+
   // CreateRealUser creates a new RealUser.
   rpc CreateRealUser(CreateRealUserRequest) returns (RealUser);
 }

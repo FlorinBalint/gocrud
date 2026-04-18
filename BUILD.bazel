@@ -1,4 +1,5 @@
 load("@gazelle//:def.bzl", "gazelle")
+load("@rules_go//go:def.bzl", "go_binary", "go_library")
 
 # gazelle:prefix github.com/FlorinBalint/gocrud
 gazelle(name = "gazelle")
@@ -11,4 +12,18 @@ gazelle(
         "-prune",
     ],
     command = "update-repos",
+)
+
+go_library(
+    name = "gocrud_lib",
+    srcs = ["scratch.go"],
+    importpath = "github.com/FlorinBalint/gocrud",
+    visibility = ["//visibility:private"],
+    deps = ["//proto/entity:options_go_proto"],
+)
+
+go_binary(
+    name = "gocrud",
+    embed = [":gocrud_lib"],
+    visibility = ["//visibility:public"],
 )

@@ -8,6 +8,12 @@ import "library/v1/book.proto";
 
 option go_package = "github.com/example/library/v1;libraryv1";
 
+// GetBookRequest is the request message for BookService.GetBook.
+message GetBookRequest {
+  // The name of the resource to retrieve.
+  string name = 1;
+}
+
 // CreateBookRequest is the request message for BookService.CreateBook.
 message CreateBookRequest {
   // The parent resource where the Book will be created.
@@ -22,6 +28,9 @@ message CreateBookRequest {
 
 // BookService provides CRUD operations for Book entities.
 service BookService {
+  // GetBook retrieves a Book by its resource name.
+  rpc GetBook(GetBookRequest) returns (Book);
+
   // CreateBook creates a new Book.
   rpc CreateBook(CreateBookRequest) returns (Book);
 }
