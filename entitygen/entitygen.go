@@ -48,6 +48,7 @@ type templateData struct {
 	SnakeName  string
 	SortedKeys []KeyField
 	Methods    []entity.Method
+	HasEtag    bool
 }
 
 // HasMethod checks if a specific method should be generated.
@@ -158,6 +159,11 @@ func GenerateServiceProto(desc protoreflect.MessageDescriptor) (string, error) {
 		methods = mExt
 	}
 
+	var hasEtag bool
+	if eExt, ok := proto.GetExtension(desc.Options(), entity.E_HasEtag).(bool); ok {
+		hasEtag = eExt
+	}
+
 	data := templateData{
 		Name:       name,
 		Package:    pkg,
@@ -166,6 +172,7 @@ func GenerateServiceProto(desc protoreflect.MessageDescriptor) (string, error) {
 		SnakeName:  snakeCase(name),
 		SortedKeys: keys,
 		Methods:    methods,
+		HasEtag:    hasEtag,
 	}
 
 	var buf bytes.Buffer

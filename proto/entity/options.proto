@@ -43,6 +43,9 @@ extend google.protobuf.MessageOptions {
   // The CRUD methods to generate for this entity.
   // If empty, all methods are generated.
   repeated Method methods = 50002;
+
+  // Indicate whether this entity supports optimistic concurrency control via an etag.
+  bool has_etag = 50003;
 }
 
 extend google.protobuf.FieldOptions {

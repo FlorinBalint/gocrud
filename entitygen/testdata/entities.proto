@@ -33,3 +33,18 @@ message ListOnlyUser {
 
   string id = 1 [(gocrud.entity.primary_key) = 1];
 }
+
+message UpdateOnlyUser {
+  option (gocrud.entity.entity) = true;
+  option (gocrud.entity.methods) = UPDATE;
+
+  string id = 1 [(gocrud.entity.primary_key) = 1];
+}
+
+message UpdateWithEtagUser {
+  option (gocrud.entity.entity) = true;
+  option (gocrud.entity.methods) = UPDATE;
+  option (gocrud.entity.has_etag) = true;
+
+  string id = 1 [(gocrud.entity.primary_key) = 1];
+}

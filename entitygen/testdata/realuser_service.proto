@@ -6,6 +6,7 @@ package testdata.v1;
 
 import "entitygen/testdata/entities.proto";
 import "proto/v1/query.proto";
+import "google/protobuf/field_mask.proto";
 
 option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata";
 
@@ -44,6 +45,15 @@ message CreateRealUserRequest {
   RealUser real_user = 3;
 }
 
+// UpdateRealUserRequest is the request message for RealUserService.UpdateRealUser.
+message UpdateRealUserRequest {
+  // The RealUser resource to update.
+  RealUser real_user = 1;
+
+  // The list of fields to update.
+  google.protobuf.FieldMask update_mask = 2;
+}
+
 // RealUserService provides CRUD operations for RealUser entities.
 service RealUserService {
   // GetRealUser retrieves a RealUser by its resource name.
@@ -54,4 +64,7 @@ service RealUserService {
 
   // CreateRealUser creates a new RealUser.
   rpc CreateRealUser(CreateRealUserRequest) returns (RealUser);
+
+  // UpdateRealUser updates a RealUser.
+  rpc UpdateRealUser(UpdateRealUserRequest) returns (RealUser);
 }

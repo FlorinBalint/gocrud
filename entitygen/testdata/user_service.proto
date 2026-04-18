@@ -6,6 +6,7 @@ package mypackage.v1;
 
 import "mypackage/v1/user.proto";
 import "proto/v1/query.proto";
+import "google/protobuf/field_mask.proto";
 
 option go_package = "github.com/example/mypackage/v1;mypackagev1";
 
@@ -47,6 +48,15 @@ message CreateUserRequest {
   User user = 4;
 }
 
+// UpdateUserRequest is the request message for UserService.UpdateUser.
+message UpdateUserRequest {
+  // The User resource to update.
+  User user = 1;
+
+  // The list of fields to update.
+  google.protobuf.FieldMask update_mask = 2;
+}
+
 // UserService provides CRUD operations for User entities.
 service UserService {
   // GetUser retrieves a User by its resource name.
@@ -57,4 +67,7 @@ service UserService {
 
   // CreateUser creates a new User.
   rpc CreateUser(CreateUserRequest) returns (User);
+
+  // UpdateUser updates a User.
+  rpc UpdateUser(UpdateUserRequest) returns (User);
 }

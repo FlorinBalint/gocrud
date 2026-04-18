@@ -6,6 +6,7 @@ package library.v1;
 
 import "library/v1/book.proto";
 import "proto/v1/query.proto";
+import "google/protobuf/field_mask.proto";
 
 option go_package = "github.com/example/library/v1;libraryv1";
 
@@ -44,6 +45,15 @@ message CreateBookRequest {
   Book book = 3;
 }
 
+// UpdateBookRequest is the request message for BookService.UpdateBook.
+message UpdateBookRequest {
+  // The Book resource to update.
+  Book book = 1;
+
+  // The list of fields to update.
+  google.protobuf.FieldMask update_mask = 2;
+}
+
 // BookService provides CRUD operations for Book entities.
 service BookService {
   // GetBook retrieves a Book by its resource name.
@@ -54,4 +64,7 @@ service BookService {
 
   // CreateBook creates a new Book.
   rpc CreateBook(CreateBookRequest) returns (Book);
+
+  // UpdateBook updates a Book.
+  rpc UpdateBook(UpdateBookRequest) returns (Book);
 }

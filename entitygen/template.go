@@ -17,6 +17,9 @@ import "{{.SourceFile}}";
 {{- if .HasMethod "LIST"}}
 import "proto/v1/query.proto";
 {{- end}}
+{{- if .HasMethod "UPDATE"}}
+import "google/protobuf/field_mask.proto";
+{{- end}}
 
 option go_package = "{{.GoPackage}}";
 {{if .HasMethod "LIST"}}
@@ -54,6 +57,21 @@ message Create{{.Name}}Request {
   // The {{.Name}} resource to create.
   {{.Name}} {{.SnakeName}} = {{add 2 (len .SortedKeys)}};
 }
+{{end}}{{if .HasMethod "UPDATE"}}
+// Update{{.Name}}Request is the request message for {{.Name}}Service.Update{{.Name}}.
+message Update{{.Name}}Request {
+  // The {{.Name}} resource to update.
+  {{.Name}} {{.SnakeName}} = 1;
+
+  // The list of fields to update.
+  google.protobuf.FieldMask update_mask = 2;
+{{- if .HasEtag}}
+
+  // The etag for concurrency control.
+  // If provided, the update will only succeed if the entity's current etag matches this value.
+  string etag = 3;
+{{- end}}
+}
 {{end}}
 // {{.Name}}Service provides CRUD operations for {{.Name}} entities.
 service {{.Name}}Service {
@@ -70,6 +88,11 @@ service {{.Name}}Service {
 
   // Create{{.Name}} creates a new {{.Name}}.
   rpc Create{{.Name}}(Create{{.Name}}Request) returns ({{.Name}});
+{{- end}}
+{{- if .HasMethod "UPDATE"}}
+
+  // Update{{.Name}} updates a {{.Name}}.
+  rpc Update{{.Name}}(Update{{.Name}}Request) returns ({{.Name}});
 {{- end}}
 }
 `
