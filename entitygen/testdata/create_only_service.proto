@@ -5,24 +5,38 @@ syntax = "proto3";
 package testdata.v1;
 
 import "entitygen/testdata/entities.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
 
 option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata";
 
 // CreateCreateOnlyUserRequest is the request message for CreateOnlyUserService.CreateCreateOnlyUser.
 message CreateCreateOnlyUserRequest {
   // The parent resource where the CreateOnlyUser will be created.
-  string parent = 1;
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).child_type = "testdata.v1/CreateOnlyUser"
+  ];
 
   // The id of the CreateOnlyUser to create.
   string id = 2;
 
   // The CreateOnlyUser resource to create.
-  CreateOnlyUser create_only_user = 3;
+  CreateOnlyUser create_only_user = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
 // CreateOnlyUserService provides CRUD operations for CreateOnlyUser entities.
 service CreateOnlyUserService {
+  option (google.api.default_host) = "testdata.v1.example.com";
 
   // CreateCreateOnlyUser creates a new CreateOnlyUser.
-  rpc CreateCreateOnlyUser(CreateCreateOnlyUserRequest) returns (CreateOnlyUser);
+  rpc CreateCreateOnlyUser(CreateCreateOnlyUserRequest) returns (CreateOnlyUser) {
+    option (google.api.http) = {
+      post: "/testdata/v1/create_only_users"
+      body: "create_only_user"
+    };
+    option (google.api.method_signature) = "parent,create_only_user";
+  }
 }

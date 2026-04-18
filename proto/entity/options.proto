@@ -44,8 +44,19 @@ extend google.protobuf.MessageOptions {
   // If empty, all methods are generated.
   repeated Method methods = 50002;
 
-  // Indicate whether this entity supports optimistic concurrency control via an etag.
+  // Set to true to include an etag field in Update/Upsert requests
+  // for optimistic concurrency control.
   bool has_etag = 50003;
+
+  // The base HTTP path for the entity collection.
+  // If unset, it will be derived from the package and message name,
+  // e.g., "/v1/books" for package "library.v1" and message "Book".
+  string base_path = 50004;
+
+  // The resource type name for google.api.resource.
+  // If unset, it defaults to "<package_name>/<MessageName>".
+  // Example: "library.googleapis.com/Book"
+  string resource_type = 50005;
 }
 
 extend google.protobuf.FieldOptions {

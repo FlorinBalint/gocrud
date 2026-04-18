@@ -14,6 +14,10 @@ syntax = "proto3";
 package {{.Package}};
 
 import "{{.SourceFile}}";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
 {{- if .HasMethod "LIST"}}
 import "proto/v1/query.proto";
 {{- end}}
@@ -26,6 +30,29 @@ import "google/protobuf/empty.proto";
 
 option go_package = "{{.GoPackage}}";
 {{if .HasMethod "LIST"}}
+// List{{.Name}}Request is the request message for {{.Name}}Service.List{{.Name}}.
+message List{{.Name}}Request {
+  // The parent resource to list under.
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).child_type = "{{.ResourceType}}"
+  ];
+
+  // Root of the WHERE-clause expression tree.
+  // Absent means no filtering (all rows match).
+  gocrud.v1.Filter filter = 2;
+
+  // Sort order. Entries are applied left-to-right (primary sort first).
+  repeated gocrud.v1.OrderBy order_by = 3;
+
+  // Pagination parameters. Absent means the server returns a default first page.
+  gocrud.v1.Pagination pagination = 4;
+
+  // If true, the response will include the total number of rows matching the
+  // filter, regardless of pagination.
+  bool include_total = 5;
+}
+
 // List{{.Name}}Response is the response message for {{.Name}}Service.List{{.Name}}.
 message List{{.Name}}Response {
   // The list of {{.Name}} resources.
@@ -46,28 +73,34 @@ message List{{.Name}}Response {
 // Get{{.Name}}Request is the request message for {{.Name}}Service.Get{{.Name}}.
 message Get{{.Name}}Request {
   // The name of the resource to retrieve.
-  string name = 1;
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "{{.ResourceType}}"
+  ];
 }
 {{end}}{{if .HasMethod "CREATE"}}
 // Create{{.Name}}Request is the request message for {{.Name}}Service.Create{{.Name}}.
 message Create{{.Name}}Request {
   // The parent resource where the {{.Name}} will be created.
-  string parent = 1;
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).child_type = "{{.ResourceType}}"
+  ];
 {{range $i, $key := .SortedKeys}}
   // The {{$key.Name}} of the {{$.Name}} to create.
   {{$key.Type}} {{$key.Name}} = {{add 2 $i}};
 {{end}}
   // The {{.Name}} resource to create.
-  {{.Name}} {{.SnakeName}} = {{add 2 (len .SortedKeys)}};
+  {{.Name}} {{.SnakeName}} = {{add 2 (len .SortedKeys)}} [(google.api.field_behavior) = REQUIRED];
 }
 {{end}}{{if .HasMethod "UPDATE"}}
 // Update{{.Name}}Request is the request message for {{.Name}}Service.Update{{.Name}}.
 message Update{{.Name}}Request {
   // The {{.Name}} resource to update.
-  {{.Name}} {{.SnakeName}} = 1;
+  {{.Name}} {{.SnakeName}} = 1 [(google.api.field_behavior) = REQUIRED];
 
   // The list of fields to update.
-  google.protobuf.FieldMask update_mask = 2;
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
 {{if .HasEtag}}
   // The etag for concurrency control.
   // If provided, the update will only succeed if the entity's current etag matches this value.
@@ -78,10 +111,10 @@ message Update{{.Name}}Request {
 // Upsert{{.Name}}Request is the request message for {{.Name}}Service.Upsert{{.Name}}.
 message Upsert{{.Name}}Request {
   // The {{.Name}} resource to upsert.
-  {{.Name}} {{.SnakeName}} = 1;
+  {{.Name}} {{.SnakeName}} = 1 [(google.api.field_behavior) = REQUIRED];
 
   // The list of fields to update.
-  google.protobuf.FieldMask update_mask = 2;
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
 {{if .HasEtag}}
   // The etag for concurrency control.
   // If provided, the update will only succeed if the entity's current etag matches this value.
@@ -92,10 +125,13 @@ message Upsert{{.Name}}Request {
 // Delete{{.Name}}Request is the request message for {{.Name}}Service.Delete{{.Name}}.
 message Delete{{.Name}}Request {
   // The name of the resource to delete.
-  string name = 1;
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "{{.ResourceType}}"
+  ];
 
   // If true, performs a cascading delete of the resource and all its children.
-  bool force_cascade = 2;
+  bool force_cascade = 2 [(google.api.field_behavior) = OPTIONAL];
 {{- if .HasEtag}}
 
   // The etag for concurrency control.
@@ -110,34 +146,69 @@ message Delete{{.Name}}Request {
 {{end}}
 // {{.Name}}Service provides CRUD operations for {{.Name}} entities.
 service {{.Name}}Service {
+  option (google.api.default_host) = "{{.Package}}.example.com";
+
 {{- if .HasMethod "GET"}}
   // Get{{.Name}} retrieves a {{.Name}} by its resource name.
-  rpc Get{{.Name}}(Get{{.Name}}Request) returns ({{.Name}});
+  rpc Get{{.Name}}(Get{{.Name}}Request) returns ({{.Name}}) {
+    option (google.api.http) = {
+      get: "{{.BasePath}}/{name=**}"
+    };
+    option (google.api.method_signature) = "name";
+  }
 {{- end}}
 {{- if .HasMethod "LIST"}}
 
   // List{{.Name}} lists {{.Name}} entities.
-  rpc List{{.Name}}(gocrud.v1.ListRequest) returns (List{{.Name}}Response);
+  rpc List{{.Name}}(List{{.Name}}Request) returns (List{{.Name}}Response) {
+    option (google.api.http) = {
+      get: "{{.BasePath}}"
+    };
+    option (google.api.method_signature) = "parent";
+  }
 {{- end}}
 {{- if .HasMethod "CREATE"}}
 
   // Create{{.Name}} creates a new {{.Name}}.
-  rpc Create{{.Name}}(Create{{.Name}}Request) returns ({{.Name}});
+  rpc Create{{.Name}}(Create{{.Name}}Request) returns ({{.Name}}) {
+    option (google.api.http) = {
+      post: "{{.BasePath}}"
+      body: "{{.SnakeName}}"
+    };
+    option (google.api.method_signature) = "parent,{{.SnakeName}}";
+  }
 {{- end}}
 {{- if .HasMethod "UPDATE"}}
 
   // Update{{.Name}} updates a {{.Name}}.
-  rpc Update{{.Name}}(Update{{.Name}}Request) returns ({{.Name}});
+  rpc Update{{.Name}}(Update{{.Name}}Request) returns ({{.Name}}) {
+    option (google.api.http) = {
+      patch: "{{.BasePath}}"
+      body: "{{.SnakeName}}"
+    };
+    option (google.api.method_signature) = "{{.SnakeName}},update_mask";
+  }
 {{- end}}
 {{- if .HasMethod "UPSERT"}}
 
   // Upsert{{.Name}} upserts a {{.Name}}.
-  rpc Upsert{{.Name}}(Upsert{{.Name}}Request) returns ({{.Name}});
+  rpc Upsert{{.Name}}(Upsert{{.Name}}Request) returns ({{.Name}}) {
+    option (google.api.http) = {
+      put: "{{.BasePath}}"
+      body: "{{.SnakeName}}"
+    };
+    option (google.api.method_signature) = "{{.SnakeName}},update_mask";
+  }
 {{- end}}
 {{- if .HasMethod "DELETE"}}
 
   // Delete{{.Name}} deletes a {{.Name}}.
-  rpc Delete{{.Name}}(Delete{{.Name}}Request) returns (google.protobuf.Empty);
+  rpc Delete{{.Name}}(Delete{{.Name}}Request) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "{{.BasePath}}/{name=**}"
+    };
+    option (google.api.method_signature) = "name";
+  }
 {{- end}}
 }
 `

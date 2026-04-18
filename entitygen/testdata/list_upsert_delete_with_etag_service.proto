@@ -5,11 +5,38 @@ syntax = "proto3";
 package testdata.v1;
 
 import "entitygen/testdata/entities.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
 import "proto/v1/query.proto";
 import "google/protobuf/field_mask.proto";
 import "google/protobuf/empty.proto";
 
 option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata";
+
+// ListListUpsertDeleteWithEtagUserRequest is the request message for ListUpsertDeleteWithEtagUserService.ListListUpsertDeleteWithEtagUser.
+message ListListUpsertDeleteWithEtagUserRequest {
+  // The parent resource to list under.
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).child_type = "testdata.v1/ListUpsertDeleteWithEtagUser"
+  ];
+
+  // Root of the WHERE-clause expression tree.
+  // Absent means no filtering (all rows match).
+  gocrud.v1.Filter filter = 2;
+
+  // Sort order. Entries are applied left-to-right (primary sort first).
+  repeated gocrud.v1.OrderBy order_by = 3;
+
+  // Pagination parameters. Absent means the server returns a default first page.
+  gocrud.v1.Pagination pagination = 4;
+
+  // If true, the response will include the total number of rows matching the
+  // filter, regardless of pagination.
+  bool include_total = 5;
+}
 
 // ListListUpsertDeleteWithEtagUserResponse is the response message for ListUpsertDeleteWithEtagUserService.ListListUpsertDeleteWithEtagUser.
 message ListListUpsertDeleteWithEtagUserResponse {
@@ -31,10 +58,10 @@ message ListListUpsertDeleteWithEtagUserResponse {
 // UpsertListUpsertDeleteWithEtagUserRequest is the request message for ListUpsertDeleteWithEtagUserService.UpsertListUpsertDeleteWithEtagUser.
 message UpsertListUpsertDeleteWithEtagUserRequest {
   // The ListUpsertDeleteWithEtagUser resource to upsert.
-  ListUpsertDeleteWithEtagUser list_upsert_delete_with_etag_user = 1;
+  ListUpsertDeleteWithEtagUser list_upsert_delete_with_etag_user = 1 [(google.api.field_behavior) = REQUIRED];
 
   // The list of fields to update.
-  google.protobuf.FieldMask update_mask = 2;
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
 
   // The etag for concurrency control.
   // If provided, the update will only succeed if the entity's current etag matches this value.
@@ -44,10 +71,13 @@ message UpsertListUpsertDeleteWithEtagUserRequest {
 // DeleteListUpsertDeleteWithEtagUserRequest is the request message for ListUpsertDeleteWithEtagUserService.DeleteListUpsertDeleteWithEtagUser.
 message DeleteListUpsertDeleteWithEtagUserRequest {
   // The name of the resource to delete.
-  string name = 1;
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "testdata.v1/ListUpsertDeleteWithEtagUser"
+  ];
 
   // If true, performs a cascading delete of the resource and all its children.
-  bool force_cascade = 2;
+  bool force_cascade = 2 [(google.api.field_behavior) = OPTIONAL];
 
   // The etag for concurrency control.
   // If provided, the delete will only succeed if the entity's current etag matches this value.
@@ -60,13 +90,30 @@ message DeleteListUpsertDeleteWithEtagUserRequest {
 
 // ListUpsertDeleteWithEtagUserService provides CRUD operations for ListUpsertDeleteWithEtagUser entities.
 service ListUpsertDeleteWithEtagUserService {
+  option (google.api.default_host) = "testdata.v1.example.com";
 
   // ListListUpsertDeleteWithEtagUser lists ListUpsertDeleteWithEtagUser entities.
-  rpc ListListUpsertDeleteWithEtagUser(gocrud.v1.ListRequest) returns (ListListUpsertDeleteWithEtagUserResponse);
+  rpc ListListUpsertDeleteWithEtagUser(ListListUpsertDeleteWithEtagUserRequest) returns (ListListUpsertDeleteWithEtagUserResponse) {
+    option (google.api.http) = {
+      get: "/testdata/v1/list_upsert_delete_with_etag_users"
+    };
+    option (google.api.method_signature) = "parent";
+  }
 
   // UpsertListUpsertDeleteWithEtagUser upserts a ListUpsertDeleteWithEtagUser.
-  rpc UpsertListUpsertDeleteWithEtagUser(UpsertListUpsertDeleteWithEtagUserRequest) returns (ListUpsertDeleteWithEtagUser);
+  rpc UpsertListUpsertDeleteWithEtagUser(UpsertListUpsertDeleteWithEtagUserRequest) returns (ListUpsertDeleteWithEtagUser) {
+    option (google.api.http) = {
+      put: "/testdata/v1/list_upsert_delete_with_etag_users"
+      body: "list_upsert_delete_with_etag_user"
+    };
+    option (google.api.method_signature) = "list_upsert_delete_with_etag_user,update_mask";
+  }
 
   // DeleteListUpsertDeleteWithEtagUser deletes a ListUpsertDeleteWithEtagUser.
-  rpc DeleteListUpsertDeleteWithEtagUser(DeleteListUpsertDeleteWithEtagUserRequest) returns (google.protobuf.Empty);
+  rpc DeleteListUpsertDeleteWithEtagUser(DeleteListUpsertDeleteWithEtagUserRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/testdata/v1/list_upsert_delete_with_etag_users/{name=**}"
+    };
+    option (google.api.method_signature) = "name";
+  }
 }

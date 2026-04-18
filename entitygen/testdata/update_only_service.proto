@@ -5,6 +5,10 @@ syntax = "proto3";
 package testdata.v1;
 
 import "entitygen/testdata/entities.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
 import "google/protobuf/field_mask.proto";
 
 option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata";
@@ -12,16 +16,23 @@ option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata"
 // UpdateUpdateOnlyUserRequest is the request message for UpdateOnlyUserService.UpdateUpdateOnlyUser.
 message UpdateUpdateOnlyUserRequest {
   // The UpdateOnlyUser resource to update.
-  UpdateOnlyUser update_only_user = 1;
+  UpdateOnlyUser update_only_user = 1 [(google.api.field_behavior) = REQUIRED];
 
   // The list of fields to update.
-  google.protobuf.FieldMask update_mask = 2;
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
 
 }
 
 // UpdateOnlyUserService provides CRUD operations for UpdateOnlyUser entities.
 service UpdateOnlyUserService {
+  option (google.api.default_host) = "testdata.v1.example.com";
 
   // UpdateUpdateOnlyUser updates a UpdateOnlyUser.
-  rpc UpdateUpdateOnlyUser(UpdateUpdateOnlyUserRequest) returns (UpdateOnlyUser);
+  rpc UpdateUpdateOnlyUser(UpdateUpdateOnlyUserRequest) returns (UpdateOnlyUser) {
+    option (google.api.http) = {
+      patch: "/testdata/v1/update_only_users"
+      body: "update_only_user"
+    };
+    option (google.api.method_signature) = "update_only_user,update_mask";
+  }
 }

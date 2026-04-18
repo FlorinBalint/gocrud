@@ -5,17 +5,30 @@ syntax = "proto3";
 package testdata.v1;
 
 import "entitygen/testdata/entities.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
 
 option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata";
 
 // GetGetOnlyUserRequest is the request message for GetOnlyUserService.GetGetOnlyUser.
 message GetGetOnlyUserRequest {
   // The name of the resource to retrieve.
-  string name = 1;
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "testdata.v1/GetOnlyUser"
+  ];
 }
 
 // GetOnlyUserService provides CRUD operations for GetOnlyUser entities.
 service GetOnlyUserService {
+  option (google.api.default_host) = "testdata.v1.example.com";
   // GetGetOnlyUser retrieves a GetOnlyUser by its resource name.
-  rpc GetGetOnlyUser(GetGetOnlyUserRequest) returns (GetOnlyUser);
+  rpc GetGetOnlyUser(GetGetOnlyUserRequest) returns (GetOnlyUser) {
+    option (google.api.http) = {
+      get: "/testdata/v1/get_only_users/{name=**}"
+    };
+    option (google.api.method_signature) = "name";
+  }
 }

@@ -5,9 +5,36 @@ syntax = "proto3";
 package testdata.v1;
 
 import "entitygen/testdata/entities.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
 import "proto/v1/query.proto";
 
 option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata";
+
+// ListListOnlyUserRequest is the request message for ListOnlyUserService.ListListOnlyUser.
+message ListListOnlyUserRequest {
+  // The parent resource to list under.
+  string parent = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).child_type = "testdata.v1/ListOnlyUser"
+  ];
+
+  // Root of the WHERE-clause expression tree.
+  // Absent means no filtering (all rows match).
+  gocrud.v1.Filter filter = 2;
+
+  // Sort order. Entries are applied left-to-right (primary sort first).
+  repeated gocrud.v1.OrderBy order_by = 3;
+
+  // Pagination parameters. Absent means the server returns a default first page.
+  gocrud.v1.Pagination pagination = 4;
+
+  // If true, the response will include the total number of rows matching the
+  // filter, regardless of pagination.
+  bool include_total = 5;
+}
 
 // ListListOnlyUserResponse is the response message for ListOnlyUserService.ListListOnlyUser.
 message ListListOnlyUserResponse {
@@ -28,7 +55,13 @@ message ListListOnlyUserResponse {
 
 // ListOnlyUserService provides CRUD operations for ListOnlyUser entities.
 service ListOnlyUserService {
+  option (google.api.default_host) = "testdata.v1.example.com";
 
   // ListListOnlyUser lists ListOnlyUser entities.
-  rpc ListListOnlyUser(gocrud.v1.ListRequest) returns (ListListOnlyUserResponse);
+  rpc ListListOnlyUser(ListListOnlyUserRequest) returns (ListListOnlyUserResponse) {
+    option (google.api.http) = {
+      get: "/testdata/v1/list_only_users"
+    };
+    option (google.api.method_signature) = "parent";
+  }
 }

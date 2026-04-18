@@ -47,8 +47,10 @@ type templateData struct {
 	SourceFile string
 	SnakeName  string
 	SortedKeys []KeyField
-	Methods    []entity.Method
-	HasEtag    bool
+	Methods      []entity.Method
+	HasEtag      bool
+	BasePath     string
+	ResourceType string
 }
 
 // HasMethod checks if a specific method should be generated.
@@ -164,15 +166,32 @@ func GenerateServiceProto(desc protoreflect.MessageDescriptor) (string, error) {
 		hasEtag = eExt
 	}
 
+	var basePath string
+	if eExt, ok := proto.GetExtension(desc.Options(), entity.E_BasePath).(string); ok && eExt != "" {
+		basePath = eExt
+	} else {
+		pkgPath := strings.ReplaceAll(pkg, ".", "/")
+		basePath = "/" + pkgPath + "/" + snakeCase(name) + "s"
+	}
+
+	var resourceType string
+	if eExt, ok := proto.GetExtension(desc.Options(), entity.E_ResourceType).(string); ok && eExt != "" {
+		resourceType = eExt
+	} else {
+		resourceType = pkg + "/" + name
+	}
+
 	data := templateData{
-		Name:       name,
-		Package:    pkg,
-		GoPackage:  goPackage,
-		SourceFile: sourceFile,
-		SnakeName:  snakeCase(name),
-		SortedKeys: keys,
-		Methods:    methods,
-		HasEtag:    hasEtag,
+		Name:         name,
+		Package:      pkg,
+		GoPackage:    goPackage,
+		SourceFile:   sourceFile,
+		SnakeName:    snakeCase(name),
+		SortedKeys:   keys,
+		Methods:      methods,
+		HasEtag:      hasEtag,
+		BasePath:     basePath,
+		ResourceType: resourceType,
 	}
 
 	var buf bytes.Buffer

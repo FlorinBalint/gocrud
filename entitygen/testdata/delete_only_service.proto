@@ -5,6 +5,10 @@ syntax = "proto3";
 package testdata.v1;
 
 import "entitygen/testdata/entities.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
 import "google/protobuf/empty.proto";
 
 option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata";
@@ -12,10 +16,13 @@ option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata"
 // DeleteDeleteOnlyUserRequest is the request message for DeleteOnlyUserService.DeleteDeleteOnlyUser.
 message DeleteDeleteOnlyUserRequest {
   // The name of the resource to delete.
-  string name = 1;
+  string name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (google.api.resource_reference).type = "testdata.v1/DeleteOnlyUser"
+  ];
 
   // If true, performs a cascading delete of the resource and all its children.
-  bool force_cascade = 2;
+  bool force_cascade = 2 [(google.api.field_behavior) = OPTIONAL];
 
   // If true, the request will succeed even if the resource does not exist.
   bool allow_missing = 3;
@@ -23,7 +30,13 @@ message DeleteDeleteOnlyUserRequest {
 
 // DeleteOnlyUserService provides CRUD operations for DeleteOnlyUser entities.
 service DeleteOnlyUserService {
+  option (google.api.default_host) = "testdata.v1.example.com";
 
   // DeleteDeleteOnlyUser deletes a DeleteOnlyUser.
-  rpc DeleteDeleteOnlyUser(DeleteDeleteOnlyUserRequest) returns (google.protobuf.Empty);
+  rpc DeleteDeleteOnlyUser(DeleteDeleteOnlyUserRequest) returns (google.protobuf.Empty) {
+    option (google.api.http) = {
+      delete: "/testdata/v1/delete_only_users/{name=**}"
+    };
+    option (google.api.method_signature) = "name";
+  }
 }

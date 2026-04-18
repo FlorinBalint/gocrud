@@ -72,3 +72,11 @@ message ListUpsertDeleteWithEtagUser {
 
   string id = 1 [(gocrud.entity.primary_key) = 1];
 }
+
+message OptionsOverrideUser {
+  option (gocrud.entity.entity) = true;
+  option (gocrud.entity.base_path) = "/api/v2/custom_users";
+  option (gocrud.entity.resource_type) = "custom.googleapis.com/CustomUser";
+
+  string id = 1 [(gocrud.entity.primary_key) = 1];
+}

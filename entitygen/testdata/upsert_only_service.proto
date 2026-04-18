@@ -5,6 +5,10 @@ syntax = "proto3";
 package testdata.v1;
 
 import "entitygen/testdata/entities.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
 import "google/protobuf/field_mask.proto";
 
 option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata";
@@ -12,16 +16,23 @@ option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata"
 // UpsertUpsertOnlyUserRequest is the request message for UpsertOnlyUserService.UpsertUpsertOnlyUser.
 message UpsertUpsertOnlyUserRequest {
   // The UpsertOnlyUser resource to upsert.
-  UpsertOnlyUser upsert_only_user = 1;
+  UpsertOnlyUser upsert_only_user = 1 [(google.api.field_behavior) = REQUIRED];
 
   // The list of fields to update.
-  google.protobuf.FieldMask update_mask = 2;
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
 
 }
 
 // UpsertOnlyUserService provides CRUD operations for UpsertOnlyUser entities.
 service UpsertOnlyUserService {
+  option (google.api.default_host) = "testdata.v1.example.com";
 
   // UpsertUpsertOnlyUser upserts a UpsertOnlyUser.
-  rpc UpsertUpsertOnlyUser(UpsertUpsertOnlyUserRequest) returns (UpsertOnlyUser);
+  rpc UpsertUpsertOnlyUser(UpsertUpsertOnlyUserRequest) returns (UpsertOnlyUser) {
+    option (google.api.http) = {
+      put: "/testdata/v1/upsert_only_users"
+      body: "upsert_only_user"
+    };
+    option (google.api.method_signature) = "upsert_only_user,update_mask";
+  }
 }

@@ -231,7 +231,11 @@ func TestGenerateServiceProto(t *testing.T) {
 
 			want := readGolden(t, tt.goldenFile)
 			if diff := cmp.Diff(want, got); diff != "" {
-				t.Errorf("output mismatch for %s (-want +got):\n%s", tt.goldenFile, diff)
+				if os.Getenv("UPDATE_GOLDEN") == "1" {
+					os.WriteFile(filepath.Join("testdata", tt.goldenFile), []byte(got), 0644)
+				} else {
+					t.Errorf("output mismatch for %s (-want +got):\n%s", tt.goldenFile, diff)
+				}
 			}
 		})
 	}
@@ -251,6 +255,7 @@ func TestGenerateServiceProto_RealProto(t *testing.T) {
 		{"UpsertOnlyUser", "upsert_only_service.proto"},
 		{"DeleteOnlyUser", "delete_only_service.proto"},
 		{"ListUpsertDeleteWithEtagUser", "list_upsert_delete_with_etag_service.proto"},
+		{"OptionsOverrideUser", "options_override_service.proto"},
 	}
 
 	for _, tt := range tests {
@@ -271,7 +276,11 @@ func TestGenerateServiceProto_RealProto(t *testing.T) {
 
 			want := readGolden(t, tt.golden)
 			if diff := cmp.Diff(want, got); diff != "" {
-				t.Errorf("output mismatch for %s (-want +got):\n%s", tt.golden, diff)
+				if os.Getenv("UPDATE_GOLDEN") == "1" {
+					os.WriteFile(filepath.Join("testdata", tt.golden), []byte(got), 0644)
+				} else {
+					t.Errorf("output mismatch for %s (-want +got):\n%s", tt.golden, diff)
+				}
 			}
 		})
 	}

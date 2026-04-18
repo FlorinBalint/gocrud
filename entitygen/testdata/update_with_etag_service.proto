@@ -5,6 +5,10 @@ syntax = "proto3";
 package testdata.v1;
 
 import "entitygen/testdata/entities.proto";
+import "google/api/annotations.proto";
+import "google/api/client.proto";
+import "google/api/field_behavior.proto";
+import "google/api/resource.proto";
 import "google/protobuf/field_mask.proto";
 
 option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata";
@@ -12,10 +16,10 @@ option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata"
 // UpdateUpdateWithEtagUserRequest is the request message for UpdateWithEtagUserService.UpdateUpdateWithEtagUser.
 message UpdateUpdateWithEtagUserRequest {
   // The UpdateWithEtagUser resource to update.
-  UpdateWithEtagUser update_with_etag_user = 1;
+  UpdateWithEtagUser update_with_etag_user = 1 [(google.api.field_behavior) = REQUIRED];
 
   // The list of fields to update.
-  google.protobuf.FieldMask update_mask = 2;
+  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
 
   // The etag for concurrency control.
   // If provided, the update will only succeed if the entity's current etag matches this value.
@@ -24,7 +28,14 @@ message UpdateUpdateWithEtagUserRequest {
 
 // UpdateWithEtagUserService provides CRUD operations for UpdateWithEtagUser entities.
 service UpdateWithEtagUserService {
+  option (google.api.default_host) = "testdata.v1.example.com";
 
   // UpdateUpdateWithEtagUser updates a UpdateWithEtagUser.
-  rpc UpdateUpdateWithEtagUser(UpdateUpdateWithEtagUserRequest) returns (UpdateWithEtagUser);
+  rpc UpdateUpdateWithEtagUser(UpdateUpdateWithEtagUserRequest) returns (UpdateWithEtagUser) {
+    option (google.api.http) = {
+      patch: "/testdata/v1/update_with_etag_users"
+      body: "update_with_etag_user"
+    };
+    option (google.api.method_signature) = "update_with_etag_user,update_mask";
+  }
 }
