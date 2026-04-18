@@ -5,8 +5,26 @@ syntax = "proto3";
 package library.v1;
 
 import "library/v1/book.proto";
+import "proto/v1/query.proto";
 
 option go_package = "github.com/example/library/v1;libraryv1";
+
+// ListBookResponse is the response message for BookService.ListBook.
+message ListBookResponse {
+  // The list of Book resources.
+  repeated Book books = 1;
+
+  // A token, which can be sent as 'page_token' to retrieve the next page.
+  // If this field is omitted, there are no subsequent pages.
+  string next_page_token = 2;
+
+  // A token, which can be sent as 'page_token' to retrieve the previous page.
+  // If this field is omitted, there are no previous pages.
+  string prev_page_token = 3;
+
+  // The total number of items, if requested.
+  int64 total_size = 4;
+}
 
 // GetBookRequest is the request message for BookService.GetBook.
 message GetBookRequest {
@@ -30,6 +48,9 @@ message CreateBookRequest {
 service BookService {
   // GetBook retrieves a Book by its resource name.
   rpc GetBook(GetBookRequest) returns (Book);
+
+  // ListBook lists Book entities.
+  rpc ListBook(gocrud.v1.ListRequest) returns (ListBookResponse);
 
   // CreateBook creates a new Book.
   rpc CreateBook(CreateBookRequest) returns (Book);

@@ -245,6 +245,7 @@ func TestGenerateServiceProto_RealProto(t *testing.T) {
 		{"RealUser", "realuser_service.proto"},
 		{"CreateOnlyUser", "create_only_service.proto"},
 		{"GetOnlyUser", "get_only_service.proto"},
+		{"ListOnlyUser", "list_only_service.proto"},
 	}
 
 	for _, tt := range tests {

@@ -14,9 +14,29 @@ syntax = "proto3";
 package {{.Package}};
 
 import "{{.SourceFile}}";
+{{- if .HasMethod "LIST"}}
+import "proto/v1/query.proto";
+{{- end}}
 
 option go_package = "{{.GoPackage}}";
-{{if .HasMethod "GET"}}
+{{if .HasMethod "LIST"}}
+// List{{.Name}}Response is the response message for {{.Name}}Service.List{{.Name}}.
+message List{{.Name}}Response {
+  // The list of {{.Name}} resources.
+  repeated {{.Name}} {{.SnakeName}}s = 1;
+
+  // A token, which can be sent as 'page_token' to retrieve the next page.
+  // If this field is omitted, there are no subsequent pages.
+  string next_page_token = 2;
+
+  // A token, which can be sent as 'page_token' to retrieve the previous page.
+  // If this field is omitted, there are no previous pages.
+  string prev_page_token = 3;
+
+  // The total number of items, if requested.
+  int64 total_size = 4;
+}
+{{end}}{{if .HasMethod "GET"}}
 // Get{{.Name}}Request is the request message for {{.Name}}Service.Get{{.Name}}.
 message Get{{.Name}}Request {
   // The name of the resource to retrieve.
@@ -40,6 +60,11 @@ service {{.Name}}Service {
 {{- if .HasMethod "GET"}}
   // Get{{.Name}} retrieves a {{.Name}} by its resource name.
   rpc Get{{.Name}}(Get{{.Name}}Request) returns ({{.Name}});
+{{- end}}
+{{- if .HasMethod "LIST"}}
+
+  // List{{.Name}} lists {{.Name}} entities.
+  rpc List{{.Name}}(gocrud.v1.ListRequest) returns (List{{.Name}}Response);
 {{- end}}
 {{- if .HasMethod "CREATE"}}
 

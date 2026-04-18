@@ -26,3 +26,10 @@ message GetOnlyUser {
 
   string id = 1 [(gocrud.entity.primary_key) = 1];
 }
+
+message ListOnlyUser {
+  option (gocrud.entity.entity) = true;
+  option (gocrud.entity.methods) = LIST;
+
+  string id = 1 [(gocrud.entity.primary_key) = 1];
+}

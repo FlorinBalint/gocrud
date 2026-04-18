@@ -193,7 +193,8 @@ message ColumnUpdate {
 // determined by the specific RPC that receives it.
 message ListRequest {
   // Columns to return. Empty means "all columns" (SELECT *).
-  repeated string fields = 1;
+  // The fields could be passed as a field mask.
+  repeated string fields = 1 [deprecated = true];
 
   // Root of the WHERE-clause expression tree.
   // Absent means no filtering (all rows match).
@@ -209,4 +210,7 @@ message ListRequest {
   // filter, regardless of pagination. Useful for UIs that need to display
   // "page X of Y" or a total result count.  
   bool include_total = 5;
+
+  // The parent resource to list under.
+  string parent = 6;
 }

@@ -5,8 +5,26 @@ syntax = "proto3";
 package mypackage.v1;
 
 import "mypackage/v1/user.proto";
+import "proto/v1/query.proto";
 
 option go_package = "github.com/example/mypackage/v1;mypackagev1";
+
+// ListUserResponse is the response message for UserService.ListUser.
+message ListUserResponse {
+  // The list of User resources.
+  repeated User users = 1;
+
+  // A token, which can be sent as 'page_token' to retrieve the next page.
+  // If this field is omitted, there are no subsequent pages.
+  string next_page_token = 2;
+
+  // A token, which can be sent as 'page_token' to retrieve the previous page.
+  // If this field is omitted, there are no previous pages.
+  string prev_page_token = 3;
+
+  // The total number of items, if requested.
+  int64 total_size = 4;
+}
 
 // GetUserRequest is the request message for UserService.GetUser.
 message GetUserRequest {
@@ -33,6 +51,9 @@ message CreateUserRequest {
 service UserService {
   // GetUser retrieves a User by its resource name.
   rpc GetUser(GetUserRequest) returns (User);
+
+  // ListUser lists User entities.
+  rpc ListUser(gocrud.v1.ListRequest) returns (ListUserResponse);
 
   // CreateUser creates a new User.
   rpc CreateUser(CreateUserRequest) returns (User);
