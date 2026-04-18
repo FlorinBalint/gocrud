@@ -20,6 +20,9 @@ import "proto/v1/query.proto";
 {{- if or (.HasMethod "UPDATE") (.HasMethod "UPSERT")}}
 import "google/protobuf/field_mask.proto";
 {{- end}}
+{{- if .HasMethod "DELETE"}}
+import "google/protobuf/empty.proto";
+{{- end}}
 
 option go_package = "{{.GoPackage}}";
 {{if .HasMethod "LIST"}}
@@ -85,6 +88,25 @@ message Upsert{{.Name}}Request {
   string etag = 3;
 {{- end}}
 }
+{{end}}{{if .HasMethod "DELETE"}}
+// Delete{{.Name}}Request is the request message for {{.Name}}Service.Delete{{.Name}}.
+message Delete{{.Name}}Request {
+  // The name of the resource to delete.
+  string name = 1;
+
+  // If true, performs a cascading delete of the resource and all its children.
+  bool force_cascade = 2;
+{{- if .HasEtag}}
+
+  // The etag for concurrency control.
+  // If provided, the delete will only succeed if the entity's current etag matches this value.
+  // A wildcard * etag will match any tag.
+  string etag = 3;
+{{- end}}
+
+  // If true, the request will succeed even if the resource does not exist.
+  bool allow_missing = {{if .HasEtag}}4{{else}}3{{end}};
+}
 {{end}}
 // {{.Name}}Service provides CRUD operations for {{.Name}} entities.
 service {{.Name}}Service {
@@ -111,6 +133,11 @@ service {{.Name}}Service {
 
   // Upsert{{.Name}} upserts a {{.Name}}.
   rpc Upsert{{.Name}}(Upsert{{.Name}}Request) returns ({{.Name}});
+{{- end}}
+{{- if .HasMethod "DELETE"}}
+
+  // Delete{{.Name}} deletes a {{.Name}}.
+  rpc Delete{{.Name}}(Delete{{.Name}}Request) returns (google.protobuf.Empty);
 {{- end}}
 }
 `

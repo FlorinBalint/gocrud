@@ -7,6 +7,7 @@ package library.v1;
 import "library/v1/book.proto";
 import "proto/v1/query.proto";
 import "google/protobuf/field_mask.proto";
+import "google/protobuf/empty.proto";
 
 option go_package = "github.com/example/library/v1;libraryv1";
 
@@ -65,6 +66,18 @@ message UpsertBookRequest {
 
 }
 
+// DeleteBookRequest is the request message for BookService.DeleteBook.
+message DeleteBookRequest {
+  // The name of the resource to delete.
+  string name = 1;
+
+  // If true, performs a cascading delete of the resource and all its children.
+  bool force_cascade = 2;
+
+  // If true, the request will succeed even if the resource does not exist.
+  bool allow_missing = 3;
+}
+
 // BookService provides CRUD operations for Book entities.
 service BookService {
   // GetBook retrieves a Book by its resource name.
@@ -81,4 +94,7 @@ service BookService {
 
   // UpsertBook upserts a Book.
   rpc UpsertBook(UpsertBookRequest) returns (Book);
+
+  // DeleteBook deletes a Book.
+  rpc DeleteBook(DeleteBookRequest) returns (google.protobuf.Empty);
 }

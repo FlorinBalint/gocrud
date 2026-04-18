@@ -55,3 +55,20 @@ message UpsertOnlyUser {
 
   string id = 1 [(gocrud.entity.primary_key) = 1];
 }
+
+message DeleteOnlyUser {
+  option (gocrud.entity.entity) = true;
+  option (gocrud.entity.methods) = DELETE;
+
+  string id = 1 [(gocrud.entity.primary_key) = 1];
+}
+
+message ListUpsertDeleteWithEtagUser {
+  option (gocrud.entity.entity) = true;
+  option (gocrud.entity.methods) = LIST;
+  option (gocrud.entity.methods) = UPSERT;
+  option (gocrud.entity.methods) = DELETE;
+  option (gocrud.entity.has_etag) = true;
+
+  string id = 1 [(gocrud.entity.primary_key) = 1];
+}

@@ -249,6 +249,8 @@ func TestGenerateServiceProto_RealProto(t *testing.T) {
 		{"UpdateOnlyUser", "update_only_service.proto"},
 		{"UpdateWithEtagUser", "update_with_etag_service.proto"},
 		{"UpsertOnlyUser", "upsert_only_service.proto"},
+		{"DeleteOnlyUser", "delete_only_service.proto"},
+		{"ListUpsertDeleteWithEtagUser", "list_upsert_delete_with_etag_service.proto"},
 	}
 
 	for _, tt := range tests {
