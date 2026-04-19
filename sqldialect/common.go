@@ -36,6 +36,8 @@ type dialectConfig struct {
 	// to a driver-native type. Return a non-nil error to reject value kinds
 	// that the backend does not support (e.g. SQLite rejects IntervalValue).
 	validateValue func(v *gocrudv1.Value) error
+	// supportsReturning indicates if the dialect natively supports the RETURNING clause.
+	supportsReturning bool
 }
 
 // baseBuilder contains the shared query-building logic parameterised by a
@@ -62,6 +64,11 @@ func (b *baseBuilder) toNative(v *gocrudv1.Value) (any, error) {
 		}
 	}
 	return valueToNative(v)
+}
+
+// SupportsReturning implements [Builder].
+func (b *baseBuilder) SupportsReturning() bool {
+	return b.cfg.supportsReturning
 }
 
 // BuildSelect implements [Builder].
@@ -154,6 +161,22 @@ func (b *baseBuilder) BuildInsert(q InsertQuery) (string, []any, error) {
 		strings.Join(quotedCols, ", "),
 		strings.Join(placeholders, ", "),
 	)
+
+	if len(q.Returning()) > 0 {
+		if !b.cfg.supportsReturning {
+			return "", nil, fmt.Errorf("backend does not support RETURNING clause")
+		}
+		retCols := make([]string, len(q.Returning()))
+		for i, c := range q.Returning() {
+			qc, err := b.cfg.quoteIdent(c)
+			if err != nil {
+				return "", nil, fmt.Errorf("invalid returning column name: %w", err)
+			}
+			retCols[i] = qc
+		}
+		sql += " RETURNING " + strings.Join(retCols, ", ")
+	}
+
 	return sql, args, nil
 }
 

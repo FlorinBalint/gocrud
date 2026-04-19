@@ -165,6 +165,17 @@ func TestMySQLBuildInsert(t *testing.T) {
 			q:       insertQuery{table: "users"},
 			wantErr: true,
 		},
+		// RETURNING clause — MySQL does not support it
+		{
+			name: "RETURNING is rejected",
+			q: insertQuery{
+				table:     "users",
+				columns:   []string{"name"},
+				values:    []*gocrudv1.Value{strVal("alice")},
+				returning: []string{"id"},
+			},
+			wantErr: true,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

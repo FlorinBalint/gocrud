@@ -57,23 +57,26 @@ type InsertQuery interface {
 	Table() string
 	Columns() []string         // must be non-empty
 	Values() []*gocrudv1.Value // nil entry → DEFAULT for that column
+	Returning() []string       // columns to return, if the backend supports it
 }
 
 // insertQuery is the concrete implementation of InsertQuery.
 type insertQuery struct {
-	table   string
-	columns []string
-	values  []*gocrudv1.Value
+	table     string
+	columns   []string
+	values    []*gocrudv1.Value
+	returning []string
 }
 
 func (q *insertQuery) Table() string             { return q.table }
 func (q *insertQuery) Columns() []string         { return q.columns }
 func (q *insertQuery) Values() []*gocrudv1.Value { return q.values }
+func (q *insertQuery) Returning() []string       { return q.returning }
 
 // NewInsertQuery constructs an InsertQuery. Pass nil for a value to use SQL
 // DEFAULT for that column. len(columns) must equal len(values).
-func NewInsertQuery(table string, columns []string, values []*gocrudv1.Value) InsertQuery {
-	return &insertQuery{table: table, columns: columns, values: values}
+func NewInsertQuery(table string, columns []string, values []*gocrudv1.Value, returning []string) InsertQuery {
+	return &insertQuery{table: table, columns: columns, values: values, returning: returning}
 }
 
 // UpdateQuery is the fully-resolved internal representation of an UPDATE
@@ -122,12 +125,14 @@ type upsertQuery struct {
 	columns      []string
 	values       []*gocrudv1.Value
 	conflictCols []string
+	returning    []string
 }
 
 func (q *upsertQuery) Table() string             { return q.table }
 func (q *upsertQuery) Columns() []string         { return q.columns }
 func (q *upsertQuery) Values() []*gocrudv1.Value { return q.values }
 func (q *upsertQuery) ConflictColumns() []string { return q.conflictCols }
+func (q *upsertQuery) Returning() []string       { return q.returning }
 
 // NewUpsertQuery constructs an UpsertQuery. Pass nil for a value entry to use
 // SQL DEFAULT for that column. len(columns) must equal len(values).
@@ -137,12 +142,14 @@ func NewUpsertQuery(
 	columns []string,
 	values []*gocrudv1.Value,
 	conflictCols []string,
+	returning []string,
 ) UpsertQuery {
 	return &upsertQuery{
 		table:        table,
 		columns:      columns,
 		values:       values,
 		conflictCols: conflictCols,
+		returning:    returning,
 	}
 }
 
@@ -222,6 +229,7 @@ type Builder interface {
 	BuildUpdate(q UpdateQuery) (sql string, args []any, err error)
 	BuildUpsert(q UpsertQuery) (sql string, args []any, err error)
 	BuildDelete(q DeleteQuery) (sql string, args []any, err error)
+	SupportsReturning() bool
 }
 
 // ForBackend returns a Builder for the given backend dialect.

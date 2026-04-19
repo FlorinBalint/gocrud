@@ -160,6 +160,50 @@ func TestSQLiteBuildInsert(t *testing.T) {
 			q:       insertQuery{table: "users"},
 			wantErr: true,
 		},
+		// RETURNING clause
+		{
+			name: "RETURNING single column",
+			q: insertQuery{
+				table:     "users",
+				columns:   []string{"name", "email"},
+				values:    []*gocrudv1.Value{strVal("alice"), strVal("alice@example.com")},
+				returning: []string{"id"},
+			},
+			wantSQL:  `INSERT INTO "users" ("name", "email") VALUES (?, ?) RETURNING "id"`,
+			wantArgs: []any{"alice", "alice@example.com"},
+		},
+		{
+			name: "RETURNING multiple columns",
+			q: insertQuery{
+				table:     "users",
+				columns:   []string{"name"},
+				values:    []*gocrudv1.Value{strVal("bob")},
+				returning: []string{"id", "created_at"},
+			},
+			wantSQL:  `INSERT INTO "users" ("name") VALUES (?) RETURNING "id", "created_at"`,
+			wantArgs: []any{"bob"},
+		},
+		{
+			name: "DEFAULT with RETURNING",
+			q: insertQuery{
+				table:     "users",
+				columns:   []string{"id", "name"},
+				values:    []*gocrudv1.Value{nil, strVal("carol")},
+				returning: []string{"id"},
+			},
+			wantSQL:  `INSERT INTO "users" ("id", "name") VALUES (DEFAULT, ?) RETURNING "id"`,
+			wantArgs: []any{"carol"},
+		},
+		{
+			name: "RETURNING with invalid column name",
+			q: insertQuery{
+				table:     "users",
+				columns:   []string{"name"},
+				values:    []*gocrudv1.Value{strVal("x")},
+				returning: []string{"bad-col"},
+			},
+			wantErr: true,
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

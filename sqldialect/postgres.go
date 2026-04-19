@@ -19,8 +19,9 @@ import "fmt"
 // postgresConfig is the dialect configuration for PostgreSQL: double-quoted
 // identifiers and $N positional placeholders.
 var postgresConfig = dialectConfig{
-	quoteIdent:  pgQuoteIdent,
-	placeholder: func(idx int) string { return fmt.Sprintf("$%d", idx) },
+	quoteIdent:        pgQuoteIdent,
+	placeholder:       func(idx int) string { return fmt.Sprintf("$%d", idx) },
+	supportsReturning: true,
 }
 
 // postgresBuilder builds PostgreSQL queries. It delegates all shared logic to

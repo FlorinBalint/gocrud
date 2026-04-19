@@ -1,27 +1,59 @@
 load("@rules_go//go:def.bzl", "go_library", "go_test")
+load("@rules_go//proto:def.bzl", "go_proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
+
+proto_library(
+    name = "test_proto",
+    srcs = ["crud_test.proto"],
+    visibility = ["//visibility:public"],
+    deps = ["//proto/entity:options_proto"],
+)
+
+go_proto_library(
+    name = "test_go_proto",
+    importpath = "github.com/FlorinBalint/gocrud/crud/testdata",
+    proto = ":test_proto",
+    visibility = ["//visibility:public"],
+    deps = ["//proto/entity:options_go_proto"],
+)
 
 go_library(
     name = "crud",
     srcs = [
+        "create.go",
         "pagination.go",
         "service.go",
     ],
     importpath = "github.com/FlorinBalint/gocrud/crud",
     visibility = ["//visibility:public"],
     deps = [
+        "//proto/entity:options_go_proto",
         "//proto/v1:query_go_proto",
         "//sqldialect",
+        "@org_golang_google_genproto//googleapis/type/date",
+        "@org_golang_google_genproto//googleapis/type/decimal",
+        "@org_golang_google_genproto//googleapis/type/timeofday",
         "@org_golang_google_grpc//codes",
         "@org_golang_google_grpc//status",
         "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//types/known/durationpb",
+        "@org_golang_google_protobuf//types/known/timestamppb",
     ],
 )
 
 go_test(
     name = "crud_test",
-    srcs = ["pagination_test.go"],
+    srcs = [
+        "create_test.go",
+        "pagination_test.go",
+    ],
     embed = [":crud"],
     deps = [
+        ":test_go_proto",
         "//proto/v1:query_go_proto",
+        "//sqldialect",
+        "@com_github_google_go_cmp//cmp",
+        "@org_golang_google_protobuf//proto",
     ],
 )

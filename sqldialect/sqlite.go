@@ -18,9 +18,10 @@ package sqldialect
 // identifiers (same as PostgreSQL), ? positional placeholders, and rejection
 // of IntervalValue since SQLite has no native INTERVAL type.
 var sqliteConfig = dialectConfig{
-	quoteIdent:    pgQuoteIdent, // SQLite supports double-quoted identifiers
-	placeholder:   func(_ int) string { return "?" },
-	validateValue: rejectIntervalValue,
+	quoteIdent:        pgQuoteIdent, // SQLite supports double-quoted identifiers
+	placeholder:       func(_ int) string { return "?" },
+	validateValue:     rejectIntervalValue,
+	supportsReturning: true,
 }
 
 // sqliteBuilder builds SQLite queries. SQL syntax (including the ON CONFLICT
