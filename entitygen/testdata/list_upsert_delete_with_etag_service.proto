@@ -15,8 +15,8 @@ import "google/protobuf/empty.proto";
 
 option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata";
 
-// ListListUpsertDeleteWithEtagUserRequest is the request message for ListUpsertDeleteWithEtagUserService.ListListUpsertDeleteWithEtagUser.
-message ListListUpsertDeleteWithEtagUserRequest {
+// ListListUpsertDeleteWithEtagUsersRequest is the request message for ListUpsertDeleteWithEtagUserService.ListListUpsertDeleteWithEtagUsers.
+message ListListUpsertDeleteWithEtagUsersRequest {
   // The parent resource to list under.
   string parent = 1 [
     (google.api.field_behavior) = REQUIRED,
@@ -38,8 +38,8 @@ message ListListUpsertDeleteWithEtagUserRequest {
   bool include_total = 5;
 }
 
-// ListListUpsertDeleteWithEtagUserResponse is the response message for ListUpsertDeleteWithEtagUserService.ListListUpsertDeleteWithEtagUser.
-message ListListUpsertDeleteWithEtagUserResponse {
+// ListListUpsertDeleteWithEtagUsersResponse is the response message for ListUpsertDeleteWithEtagUserService.ListListUpsertDeleteWithEtagUsers.
+message ListListUpsertDeleteWithEtagUsersResponse {
   // The list of ListUpsertDeleteWithEtagUser resources.
   repeated ListUpsertDeleteWithEtagUser list_upsert_delete_with_etag_users = 1;
 
@@ -92,8 +92,8 @@ message DeleteListUpsertDeleteWithEtagUserRequest {
 service ListUpsertDeleteWithEtagUserService {
   option (google.api.default_host) = "testdata.v1.example.com";
 
-  // ListListUpsertDeleteWithEtagUser lists ListUpsertDeleteWithEtagUser entities.
-  rpc ListListUpsertDeleteWithEtagUser(ListListUpsertDeleteWithEtagUserRequest) returns (ListListUpsertDeleteWithEtagUserResponse) {
+  // ListListUpsertDeleteWithEtagUsers lists ListUpsertDeleteWithEtagUser entities.
+  rpc ListListUpsertDeleteWithEtagUsers(ListListUpsertDeleteWithEtagUsersRequest) returns (ListListUpsertDeleteWithEtagUsersResponse) {
     option (google.api.http) = {
       get: "/testdata/v1/list_upsert_delete_with_etag_users"
     };

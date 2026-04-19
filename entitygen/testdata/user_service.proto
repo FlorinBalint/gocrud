@@ -15,8 +15,8 @@ import "google/protobuf/empty.proto";
 
 option go_package = "github.com/example/mypackage/v1;mypackagev1";
 
-// ListUserRequest is the request message for UserService.ListUser.
-message ListUserRequest {
+// ListUsersRequest is the request message for UserService.ListUsers.
+message ListUsersRequest {
   // The parent resource to list under.
   string parent = 1 [
     (google.api.field_behavior) = REQUIRED,
@@ -38,8 +38,8 @@ message ListUserRequest {
   bool include_total = 5;
 }
 
-// ListUserResponse is the response message for UserService.ListUser.
-message ListUserResponse {
+// ListUsersResponse is the response message for UserService.ListUsers.
+message ListUsersResponse {
   // The list of User resources.
   repeated User users = 1;
 
@@ -128,8 +128,8 @@ service UserService {
     option (google.api.method_signature) = "name";
   }
 
-  // ListUser lists User entities.
-  rpc ListUser(ListUserRequest) returns (ListUserResponse) {
+  // ListUsers lists User entities.
+  rpc ListUsers(ListUsersRequest) returns (ListUsersResponse) {
     option (google.api.http) = {
       get: "/mypackage/v1/users"
     };

@@ -13,8 +13,8 @@ import "proto/v1/query.proto";
 
 option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata";
 
-// ListListOnlyUserRequest is the request message for ListOnlyUserService.ListListOnlyUser.
-message ListListOnlyUserRequest {
+// ListListOnlyUsersRequest is the request message for ListOnlyUserService.ListListOnlyUsers.
+message ListListOnlyUsersRequest {
   // The parent resource to list under.
   string parent = 1 [
     (google.api.field_behavior) = REQUIRED,
@@ -36,8 +36,8 @@ message ListListOnlyUserRequest {
   bool include_total = 5;
 }
 
-// ListListOnlyUserResponse is the response message for ListOnlyUserService.ListListOnlyUser.
-message ListListOnlyUserResponse {
+// ListListOnlyUsersResponse is the response message for ListOnlyUserService.ListListOnlyUsers.
+message ListListOnlyUsersResponse {
   // The list of ListOnlyUser resources.
   repeated ListOnlyUser list_only_users = 1;
 
@@ -57,8 +57,8 @@ message ListListOnlyUserResponse {
 service ListOnlyUserService {
   option (google.api.default_host) = "testdata.v1.example.com";
 
-  // ListListOnlyUser lists ListOnlyUser entities.
-  rpc ListListOnlyUser(ListListOnlyUserRequest) returns (ListListOnlyUserResponse) {
+  // ListListOnlyUsers lists ListOnlyUser entities.
+  rpc ListListOnlyUsers(ListListOnlyUsersRequest) returns (ListListOnlyUsersResponse) {
     option (google.api.http) = {
       get: "/testdata/v1/list_only_users"
     };

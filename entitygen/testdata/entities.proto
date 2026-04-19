@@ -80,3 +80,23 @@ message OptionsOverrideUser {
 
   string id = 1 [(gocrud.entity.primary_key) = 1];
 }
+
+message AutogenUser {
+  option (gocrud.entity.entity) = true;
+  option (gocrud.entity.table) = "composite_entities";
+  option (gocrud.entity.base_path) = "/api/v2/custom_users";
+  option (gocrud.entity.resource_type) = "custom.googleapis.com/CustomUser";
+
+  string id_1 = 1 [(gocrud.entity.primary_key) = 1];
+
+  int64 id_2 = 2 [
+    (gocrud.entity.primary_key) = 2
+  ];
+
+  int64 id_3 = 3 [
+    (gocrud.entity.primary_key) = 2,
+    (gocrud.entity.auto_generated) = true
+  ];
+  
+  string email = 4;
+}

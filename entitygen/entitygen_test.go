@@ -141,12 +141,12 @@ func TestGenerateServiceProto(t *testing.T) {
 		passNil    bool
 	}{
 		{
-			name: "composite_key",
-			descName:   "User",
-			descPkg:    "mypackage.v1",
-			descGoPkg:  "github.com/example/mypackage/v1;mypackagev1",
-			descFile:   "mypackage/v1/user.proto",
-			isEntity:   true,
+			name:      "composite_key",
+			descName:  "User",
+			descPkg:   "mypackage.v1",
+			descGoPkg: "github.com/example/mypackage/v1;mypackagev1",
+			descFile:  "mypackage/v1/user.proto",
+			isEntity:  true,
 			keyFields: []KeyField{
 				{Name: "org_id", Type: "string", Order: 1},
 				{Name: "user_id", Type: "string", Order: 2},
@@ -154,24 +154,24 @@ func TestGenerateServiceProto(t *testing.T) {
 			goldenFile: "user_service.proto",
 		},
 		{
-			name: "single_key",
-			descName:   "Book",
-			descPkg:    "library.v1",
-			descGoPkg:  "github.com/example/library/v1;libraryv1",
-			descFile:   "library/v1/book.proto",
-			isEntity:   true,
+			name:      "single_key",
+			descName:  "Book",
+			descPkg:   "library.v1",
+			descGoPkg: "github.com/example/library/v1;libraryv1",
+			descFile:  "library/v1/book.proto",
+			isEntity:  true,
 			keyFields: []KeyField{
 				{Name: "book_id", Type: "string", Order: 1},
 			},
 			goldenFile: "book_service.proto",
 		},
 		{
-			name: "keys_sorted_by_order",
-			descName:   "User",
-			descPkg:    "mypackage.v1",
-			descGoPkg:  "github.com/example/mypackage/v1;mypackagev1",
-			descFile:   "mypackage/v1/user.proto",
-			isEntity:   true,
+			name:      "keys_sorted_by_order",
+			descName:  "User",
+			descPkg:   "mypackage.v1",
+			descGoPkg: "github.com/example/mypackage/v1;mypackagev1",
+			descFile:  "mypackage/v1/user.proto",
+			isEntity:  true,
 			keyFields: []KeyField{
 				{Name: "user_id", Type: "string", Order: 2},
 				{Name: "org_id", Type: "string", Order: 1},
@@ -190,7 +190,7 @@ func TestGenerateServiceProto(t *testing.T) {
 			descGoPkg: "github.com/example/mypackage/v1;mypackagev1",
 			descFile:  "mypackage/v1/user.proto",
 			isEntity:  false,
-			wantErr: true,
+			wantErr:   true,
 		},
 		{
 			name:      "empty_package",
@@ -199,7 +199,7 @@ func TestGenerateServiceProto(t *testing.T) {
 			descGoPkg: "g",
 			descFile:  "f",
 			isEntity:  true,
-			wantErr: true,
+			wantErr:   true,
 		},
 		{
 			name:      "empty_go_package",
@@ -208,7 +208,7 @@ func TestGenerateServiceProto(t *testing.T) {
 			descGoPkg: "",
 			descFile:  "f",
 			isEntity:  true,
-			wantErr: true,
+			wantErr:   true,
 		},
 	}
 
@@ -256,6 +256,7 @@ func TestGenerateServiceProto_RealProto(t *testing.T) {
 		{"DeleteOnlyUser", "delete_only_service.proto"},
 		{"ListUpsertDeleteWithEtagUser", "list_upsert_delete_with_etag_service.proto"},
 		{"OptionsOverrideUser", "options_override_service.proto"},
+		{"AutogenUser", "autogen_user_service.proto"},
 	}
 
 	for _, tt := range tests {

@@ -15,8 +15,8 @@ import "google/protobuf/empty.proto";
 
 option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata";
 
-// ListRealUserRequest is the request message for RealUserService.ListRealUser.
-message ListRealUserRequest {
+// ListRealUsersRequest is the request message for RealUserService.ListRealUsers.
+message ListRealUsersRequest {
   // The parent resource to list under.
   string parent = 1 [
     (google.api.field_behavior) = REQUIRED,
@@ -38,8 +38,8 @@ message ListRealUserRequest {
   bool include_total = 5;
 }
 
-// ListRealUserResponse is the response message for RealUserService.ListRealUser.
-message ListRealUserResponse {
+// ListRealUsersResponse is the response message for RealUserService.ListRealUsers.
+message ListRealUsersResponse {
   // The list of RealUser resources.
   repeated RealUser real_users = 1;
 
@@ -125,8 +125,8 @@ service RealUserService {
     option (google.api.method_signature) = "name";
   }
 
-  // ListRealUser lists RealUser entities.
-  rpc ListRealUser(ListRealUserRequest) returns (ListRealUserResponse) {
+  // ListRealUsers lists RealUser entities.
+  rpc ListRealUsers(ListRealUsersRequest) returns (ListRealUsersResponse) {
     option (google.api.http) = {
       get: "/testdata/v1/real_users"
     };

@@ -30,8 +30,8 @@ import "google/protobuf/empty.proto";
 
 option go_package = "{{.GoPackage}}";
 {{if .HasMethod "LIST"}}
-// List{{.Name}}Request is the request message for {{.Name}}Service.List{{.Name}}.
-message List{{.Name}}Request {
+// List{{.Name}}sRequest is the request message for {{.Name}}Service.List{{.Name}}s.
+message List{{.Name}}sRequest {
   // The parent resource to list under.
   string parent = 1 [
     (google.api.field_behavior) = REQUIRED,
@@ -53,8 +53,8 @@ message List{{.Name}}Request {
   bool include_total = 5;
 }
 
-// List{{.Name}}Response is the response message for {{.Name}}Service.List{{.Name}}.
-message List{{.Name}}Response {
+// List{{.Name}}sResponse is the response message for {{.Name}}Service.List{{.Name}}s.
+message List{{.Name}}sResponse {
   // The list of {{.Name}} resources.
   repeated {{.Name}} {{.SnakeName}}s = 1;
 
@@ -86,12 +86,12 @@ message Create{{.Name}}Request {
     (google.api.field_behavior) = REQUIRED,
     (google.api.resource_reference).child_type = "{{.ResourceType}}"
   ];
-{{range $i, $key := .SortedKeys}}
+{{range $i, $key := .ProvidedKeys}}
   // The {{$key.Name}} of the {{$.Name}} to create.
   {{$key.Type}} {{$key.Name}} = {{add 2 $i}};
 {{end}}
   // The {{.Name}} resource to create.
-  {{.Name}} {{.SnakeName}} = {{add 2 (len .SortedKeys)}} [(google.api.field_behavior) = REQUIRED];
+  {{.Name}} {{.SnakeName}} = {{add 2 (len .ProvidedKeys)}} [(google.api.field_behavior) = REQUIRED];
 }
 {{end}}{{if .HasMethod "UPDATE"}}
 // Update{{.Name}}Request is the request message for {{.Name}}Service.Update{{.Name}}.
@@ -159,8 +159,8 @@ service {{.Name}}Service {
 {{- end}}
 {{- if .HasMethod "LIST"}}
 
-  // List{{.Name}} lists {{.Name}} entities.
-  rpc List{{.Name}}(List{{.Name}}Request) returns (List{{.Name}}Response) {
+  // List{{.Name}}s lists {{.Name}} entities.
+  rpc List{{.Name}}s(List{{.Name}}sRequest) returns (List{{.Name}}sResponse) {
     option (google.api.http) = {
       get: "{{.BasePath}}"
     };

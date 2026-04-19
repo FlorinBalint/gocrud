@@ -15,8 +15,8 @@ import "google/protobuf/empty.proto";
 
 option go_package = "github.com/example/library/v1;libraryv1";
 
-// ListBookRequest is the request message for BookService.ListBook.
-message ListBookRequest {
+// ListBooksRequest is the request message for BookService.ListBooks.
+message ListBooksRequest {
   // The parent resource to list under.
   string parent = 1 [
     (google.api.field_behavior) = REQUIRED,
@@ -38,8 +38,8 @@ message ListBookRequest {
   bool include_total = 5;
 }
 
-// ListBookResponse is the response message for BookService.ListBook.
-message ListBookResponse {
+// ListBooksResponse is the response message for BookService.ListBooks.
+message ListBooksResponse {
   // The list of Book resources.
   repeated Book books = 1;
 
@@ -125,8 +125,8 @@ service BookService {
     option (google.api.method_signature) = "name";
   }
 
-  // ListBook lists Book entities.
-  rpc ListBook(ListBookRequest) returns (ListBookResponse) {
+  // ListBooks lists Book entities.
+  rpc ListBooks(ListBooksRequest) returns (ListBooksResponse) {
     option (google.api.http) = {
       get: "/library/v1/books"
     };
