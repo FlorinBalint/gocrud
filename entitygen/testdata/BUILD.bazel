@@ -11,7 +11,14 @@ proto_library(
     name = "testdata_proto",
     srcs = ["entities.proto"],
     visibility = ["//visibility:public"],
-    deps = ["//proto/entity:options_proto"],
+    deps = [
+        "//proto/entity:options_proto",
+        "@googleapis//google/type:date_proto",
+        "@googleapis//google/type:decimal_proto",
+        "@googleapis//google/type:timeofday_proto",
+        "@protobuf//:duration_proto",
+        "@protobuf//:timestamp_proto",
+    ],
 )
 
 go_proto_library(
@@ -19,5 +26,10 @@ go_proto_library(
     importpath = "github.com/FlorinBalint/gocrud/entitygen/testdata",
     proto = ":testdata_proto",
     visibility = ["//visibility:public"],
-    deps = ["//proto/entity:options_go_proto"],
+    deps = [
+        "//proto/entity:options_go_proto",
+        "@googleapis//google/type:date_go_proto",
+        "@googleapis//google/type:decimal_go_proto",
+        "@googleapis//google/type:timeofday_go_proto",
+    ],
 )

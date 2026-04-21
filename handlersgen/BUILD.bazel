@@ -1,0 +1,33 @@
+load("@rules_go//go:def.bzl", "go_library", "go_test")
+
+go_library(
+    name = "handlersgen",
+    srcs = [
+        "handlersgen.go",
+        "template.go",
+    ],
+    embedsrcs = [
+        "templates/types.go.tmpl",
+        "templates/create.go.tmpl",
+    ],
+    importpath = "github.com/FlorinBalint/gocrud/handlersgen",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//proto/entity:options_go_proto",
+        "@org_golang_google_protobuf//proto",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+        "@org_golang_google_protobuf//types/descriptorpb",
+    ],
+)
+
+go_test(
+    name = "handlersgen_test",
+    srcs = ["handlersgen_test.go"],
+    data = ["//handlersgen/testdata:test_files"],
+    embed = [":handlersgen"],
+    deps = [
+        "//entitygen/testdata:testdata_go_proto",
+        "@com_github_google_go_cmp//cmp",
+        "@org_golang_google_protobuf//reflect/protoreflect",
+    ],
+)

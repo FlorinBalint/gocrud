@@ -4,6 +4,11 @@ package testdata.v1;
 
 option go_package = "github.com/FlorinBalint/gocrud/entitygen/testdata;testdata";
 
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "google/type/date.proto";
+import "google/type/decimal.proto";
+import "google/type/timeofday.proto";
 import "proto/entity/options.proto";
 
 message RealUser {
@@ -99,4 +104,16 @@ message AutogenUser {
   ];
   
   string email = 4;
+}
+
+message Event {
+  option (gocrud.entity.entity) = true;
+  option (gocrud.entity.methods) = CREATE;
+
+  string id = 1 [(gocrud.entity.primary_key) = 1];
+  google.protobuf.Timestamp commit_timestamp = 2 [(gocrud.entity.primary_key) = 2];
+  google.type.Date date_of_birth = 3;
+  google.protobuf.Duration duration = 4;
+  google.type.Decimal price = 5;
+  google.type.TimeOfDay alarm_time = 6;
 }
