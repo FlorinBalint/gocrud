@@ -27,7 +27,7 @@ service GetOnlyUserService {
   // GetGetOnlyUser retrieves a GetOnlyUser by its resource name.
   rpc GetGetOnlyUser(GetGetOnlyUserRequest) returns (GetOnlyUser) {
     option (google.api.http) = {
-      get: "/testdata/v1/get_only_users/{name=**}"
+      get: "/testdata/v1/get_only_users/{id=*}"
     };
     option (google.api.method_signature) = "name";
   }

@@ -123,7 +123,7 @@ service UserService {
   // GetUser retrieves a User by its resource name.
   rpc GetUser(GetUserRequest) returns (User) {
     option (google.api.http) = {
-      get: "/mypackage/v1/users/{name=**}"
+      get: "/mypackage/v1/users/{org_id=*}/{user_id=*}"
     };
     option (google.api.method_signature) = "name";
   }
@@ -148,7 +148,7 @@ service UserService {
   // UpdateUser updates a User.
   rpc UpdateUser(UpdateUserRequest) returns (User) {
     option (google.api.http) = {
-      patch: "/mypackage/v1/users"
+      patch: "/mypackage/v1/users/{org_id=*}/{user_id=*}"
       body: "user"
     };
     option (google.api.method_signature) = "user,update_mask";
@@ -157,7 +157,7 @@ service UserService {
   // UpsertUser upserts a User.
   rpc UpsertUser(UpsertUserRequest) returns (User) {
     option (google.api.http) = {
-      put: "/mypackage/v1/users"
+      put: "/mypackage/v1/users/{org_id=*}/{user_id=*}"
       body: "user"
     };
     option (google.api.method_signature) = "user,update_mask";
@@ -166,7 +166,7 @@ service UserService {
   // DeleteUser deletes a User.
   rpc DeleteUser(DeleteUserRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-      delete: "/mypackage/v1/users/{name=**}"
+      delete: "/mypackage/v1/users/{org_id=*}/{user_id=*}"
     };
     option (google.api.method_signature) = "name";
   }

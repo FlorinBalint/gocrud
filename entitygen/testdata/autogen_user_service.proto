@@ -123,7 +123,7 @@ service AutogenUserService {
   // GetAutogenUser retrieves a AutogenUser by its resource name.
   rpc GetAutogenUser(GetAutogenUserRequest) returns (AutogenUser) {
     option (google.api.http) = {
-      get: "/api/v2/custom_users/{name=**}"
+      get: "/testdata/v1/autogen_users/{id_1=*}/{id_2=*}/{id_3=*}"
     };
     option (google.api.method_signature) = "name";
   }
@@ -131,7 +131,7 @@ service AutogenUserService {
   // ListAutogenUsers lists AutogenUser entities.
   rpc ListAutogenUsers(ListAutogenUsersRequest) returns (ListAutogenUsersResponse) {
     option (google.api.http) = {
-      get: "/api/v2/custom_users"
+      get: "/testdata/v1/autogen_users"
     };
     option (google.api.method_signature) = "parent";
   }
@@ -139,7 +139,7 @@ service AutogenUserService {
   // CreateAutogenUser creates a new AutogenUser.
   rpc CreateAutogenUser(CreateAutogenUserRequest) returns (AutogenUser) {
     option (google.api.http) = {
-      post: "/api/v2/custom_users"
+      post: "/testdata/v1/autogen_users"
       body: "autogen_user"
     };
     option (google.api.method_signature) = "parent,autogen_user";
@@ -148,7 +148,7 @@ service AutogenUserService {
   // UpdateAutogenUser updates a AutogenUser.
   rpc UpdateAutogenUser(UpdateAutogenUserRequest) returns (AutogenUser) {
     option (google.api.http) = {
-      patch: "/api/v2/custom_users"
+      patch: "/testdata/v1/autogen_users/{id_1=*}/{id_2=*}/{id_3=*}"
       body: "autogen_user"
     };
     option (google.api.method_signature) = "autogen_user,update_mask";
@@ -157,7 +157,7 @@ service AutogenUserService {
   // UpsertAutogenUser upserts a AutogenUser.
   rpc UpsertAutogenUser(UpsertAutogenUserRequest) returns (AutogenUser) {
     option (google.api.http) = {
-      put: "/api/v2/custom_users"
+      put: "/testdata/v1/autogen_users/{id_1=*}/{id_2=*}/{id_3=*}"
       body: "autogen_user"
     };
     option (google.api.method_signature) = "autogen_user,update_mask";
@@ -166,7 +166,7 @@ service AutogenUserService {
   // DeleteAutogenUser deletes a AutogenUser.
   rpc DeleteAutogenUser(DeleteAutogenUserRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-      delete: "/api/v2/custom_users/{name=**}"
+      delete: "/testdata/v1/autogen_users/{id_1=*}/{id_2=*}/{id_3=*}"
     };
     option (google.api.method_signature) = "name";
   }

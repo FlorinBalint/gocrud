@@ -152,7 +152,7 @@ service {{.Name}}Service {
   // Get{{.Name}} retrieves a {{.Name}} by its resource name.
   rpc Get{{.Name}}(Get{{.Name}}Request) returns ({{.Name}}) {
     option (google.api.http) = {
-      get: "{{.BasePath}}/{name=**}"
+      get: "{{.ResourcePath}}"
     };
     option (google.api.method_signature) = "name";
   }
@@ -183,7 +183,7 @@ service {{.Name}}Service {
   // Update{{.Name}} updates a {{.Name}}.
   rpc Update{{.Name}}(Update{{.Name}}Request) returns ({{.Name}}) {
     option (google.api.http) = {
-      patch: "{{.BasePath}}"
+      patch: "{{.ResourcePath}}"
       body: "{{.SnakeName}}"
     };
     option (google.api.method_signature) = "{{.SnakeName}},update_mask";
@@ -194,7 +194,7 @@ service {{.Name}}Service {
   // Upsert{{.Name}} upserts a {{.Name}}.
   rpc Upsert{{.Name}}(Upsert{{.Name}}Request) returns ({{.Name}}) {
     option (google.api.http) = {
-      put: "{{.BasePath}}"
+      put: "{{.ResourcePath}}"
       body: "{{.SnakeName}}"
     };
     option (google.api.method_signature) = "{{.SnakeName}},update_mask";
@@ -205,7 +205,7 @@ service {{.Name}}Service {
   // Delete{{.Name}} deletes a {{.Name}}.
   rpc Delete{{.Name}}(Delete{{.Name}}Request) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-      delete: "{{.BasePath}}/{name=**}"
+      delete: "{{.ResourcePath}}"
     };
     option (google.api.method_signature) = "name";
   }

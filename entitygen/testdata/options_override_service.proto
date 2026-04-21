@@ -72,11 +72,14 @@ message CreateOptionsOverrideUserRequest {
     (google.api.resource_reference).child_type = "custom.googleapis.com/CustomUser"
   ];
 
+  // The account_id of the OptionsOverrideUser to create.
+  string account_id = 2;
+
   // The id of the OptionsOverrideUser to create.
-  string id = 2;
+  string id = 3;
 
   // The OptionsOverrideUser resource to create.
-  OptionsOverrideUser options_override_user = 3 [(google.api.field_behavior) = REQUIRED];
+  OptionsOverrideUser options_override_user = 4 [(google.api.field_behavior) = REQUIRED];
 }
 
 // UpdateOptionsOverrideUserRequest is the request message for OptionsOverrideUserService.UpdateOptionsOverrideUser.
@@ -120,7 +123,7 @@ service OptionsOverrideUserService {
   // GetOptionsOverrideUser retrieves a OptionsOverrideUser by its resource name.
   rpc GetOptionsOverrideUser(GetOptionsOverrideUserRequest) returns (OptionsOverrideUser) {
     option (google.api.http) = {
-      get: "/api/v2/custom_users/{name=**}"
+      get: "/api/v2/accounts/{account_id}/custom_users/{id}"
     };
     option (google.api.method_signature) = "name";
   }
@@ -128,7 +131,7 @@ service OptionsOverrideUserService {
   // ListOptionsOverrideUsers lists OptionsOverrideUser entities.
   rpc ListOptionsOverrideUsers(ListOptionsOverrideUsersRequest) returns (ListOptionsOverrideUsersResponse) {
     option (google.api.http) = {
-      get: "/api/v2/custom_users"
+      get: "/api/v2/accounts/{account_id}/custom_users"
     };
     option (google.api.method_signature) = "parent";
   }
@@ -136,7 +139,7 @@ service OptionsOverrideUserService {
   // CreateOptionsOverrideUser creates a new OptionsOverrideUser.
   rpc CreateOptionsOverrideUser(CreateOptionsOverrideUserRequest) returns (OptionsOverrideUser) {
     option (google.api.http) = {
-      post: "/api/v2/custom_users"
+      post: "/api/v2/accounts/{account_id}/custom_users"
       body: "options_override_user"
     };
     option (google.api.method_signature) = "parent,options_override_user";
@@ -145,7 +148,7 @@ service OptionsOverrideUserService {
   // UpdateOptionsOverrideUser updates a OptionsOverrideUser.
   rpc UpdateOptionsOverrideUser(UpdateOptionsOverrideUserRequest) returns (OptionsOverrideUser) {
     option (google.api.http) = {
-      patch: "/api/v2/custom_users"
+      patch: "/api/v2/accounts/{account_id}/custom_users/{id}"
       body: "options_override_user"
     };
     option (google.api.method_signature) = "options_override_user,update_mask";
@@ -154,7 +157,7 @@ service OptionsOverrideUserService {
   // UpsertOptionsOverrideUser upserts a OptionsOverrideUser.
   rpc UpsertOptionsOverrideUser(UpsertOptionsOverrideUserRequest) returns (OptionsOverrideUser) {
     option (google.api.http) = {
-      put: "/api/v2/custom_users"
+      put: "/api/v2/accounts/{account_id}/custom_users/{id}"
       body: "options_override_user"
     };
     option (google.api.method_signature) = "options_override_user,update_mask";
@@ -163,7 +166,7 @@ service OptionsOverrideUserService {
   // DeleteOptionsOverrideUser deletes a OptionsOverrideUser.
   rpc DeleteOptionsOverrideUser(DeleteOptionsOverrideUserRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-      delete: "/api/v2/custom_users/{name=**}"
+      delete: "/api/v2/accounts/{account_id}/custom_users/{id}"
     };
     option (google.api.method_signature) = "name";
   }

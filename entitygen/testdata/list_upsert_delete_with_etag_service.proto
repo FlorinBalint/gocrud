@@ -103,7 +103,7 @@ service ListUpsertDeleteWithEtagUserService {
   // UpsertListUpsertDeleteWithEtagUser upserts a ListUpsertDeleteWithEtagUser.
   rpc UpsertListUpsertDeleteWithEtagUser(UpsertListUpsertDeleteWithEtagUserRequest) returns (ListUpsertDeleteWithEtagUser) {
     option (google.api.http) = {
-      put: "/testdata/v1/list_upsert_delete_with_etag_users"
+      put: "/testdata/v1/list_upsert_delete_with_etag_users/{id=*}"
       body: "list_upsert_delete_with_etag_user"
     };
     option (google.api.method_signature) = "list_upsert_delete_with_etag_user,update_mask";
@@ -112,7 +112,7 @@ service ListUpsertDeleteWithEtagUserService {
   // DeleteListUpsertDeleteWithEtagUser deletes a ListUpsertDeleteWithEtagUser.
   rpc DeleteListUpsertDeleteWithEtagUser(DeleteListUpsertDeleteWithEtagUserRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-      delete: "/testdata/v1/list_upsert_delete_with_etag_users/{name=**}"
+      delete: "/testdata/v1/list_upsert_delete_with_etag_users/{id=*}"
     };
     option (google.api.method_signature) = "name";
   }

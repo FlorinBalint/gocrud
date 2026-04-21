@@ -120,7 +120,7 @@ service RealUserService {
   // GetRealUser retrieves a RealUser by its resource name.
   rpc GetRealUser(GetRealUserRequest) returns (RealUser) {
     option (google.api.http) = {
-      get: "/testdata/v1/real_users/{name=**}"
+      get: "/testdata/v1/real_users/{id=*}"
     };
     option (google.api.method_signature) = "name";
   }
@@ -145,7 +145,7 @@ service RealUserService {
   // UpdateRealUser updates a RealUser.
   rpc UpdateRealUser(UpdateRealUserRequest) returns (RealUser) {
     option (google.api.http) = {
-      patch: "/testdata/v1/real_users"
+      patch: "/testdata/v1/real_users/{id=*}"
       body: "real_user"
     };
     option (google.api.method_signature) = "real_user,update_mask";
@@ -154,7 +154,7 @@ service RealUserService {
   // UpsertRealUser upserts a RealUser.
   rpc UpsertRealUser(UpsertRealUserRequest) returns (RealUser) {
     option (google.api.http) = {
-      put: "/testdata/v1/real_users"
+      put: "/testdata/v1/real_users/{id=*}"
       body: "real_user"
     };
     option (google.api.method_signature) = "real_user,update_mask";
@@ -163,7 +163,7 @@ service RealUserService {
   // DeleteRealUser deletes a RealUser.
   rpc DeleteRealUser(DeleteRealUserRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-      delete: "/testdata/v1/real_users/{name=**}"
+      delete: "/testdata/v1/real_users/{id=*}"
     };
     option (google.api.method_signature) = "name";
   }

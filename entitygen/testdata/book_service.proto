@@ -120,7 +120,7 @@ service BookService {
   // GetBook retrieves a Book by its resource name.
   rpc GetBook(GetBookRequest) returns (Book) {
     option (google.api.http) = {
-      get: "/library/v1/books/{name=**}"
+      get: "/library/v1/books/{book_id=*}"
     };
     option (google.api.method_signature) = "name";
   }
@@ -145,7 +145,7 @@ service BookService {
   // UpdateBook updates a Book.
   rpc UpdateBook(UpdateBookRequest) returns (Book) {
     option (google.api.http) = {
-      patch: "/library/v1/books"
+      patch: "/library/v1/books/{book_id=*}"
       body: "book"
     };
     option (google.api.method_signature) = "book,update_mask";
@@ -154,7 +154,7 @@ service BookService {
   // UpsertBook upserts a Book.
   rpc UpsertBook(UpsertBookRequest) returns (Book) {
     option (google.api.http) = {
-      put: "/library/v1/books"
+      put: "/library/v1/books/{book_id=*}"
       body: "book"
     };
     option (google.api.method_signature) = "book,update_mask";
@@ -163,7 +163,7 @@ service BookService {
   // DeleteBook deletes a Book.
   rpc DeleteBook(DeleteBookRequest) returns (google.protobuf.Empty) {
     option (google.api.http) = {
-      delete: "/library/v1/books/{name=**}"
+      delete: "/library/v1/books/{book_id=*}"
     };
     option (google.api.method_signature) = "name";
   }

@@ -30,7 +30,7 @@ service UpsertOnlyUserService {
   // UpsertUpsertOnlyUser upserts a UpsertOnlyUser.
   rpc UpsertUpsertOnlyUser(UpsertUpsertOnlyUserRequest) returns (UpsertOnlyUser) {
     option (google.api.http) = {
-      put: "/testdata/v1/upsert_only_users"
+      put: "/testdata/v1/upsert_only_users/{id=*}"
       body: "upsert_only_user"
     };
     option (google.api.method_signature) = "upsert_only_user,update_mask";

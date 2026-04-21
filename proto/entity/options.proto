@@ -48,10 +48,13 @@ extend google.protobuf.MessageOptions {
   // for optimistic concurrency control.
   bool has_etag = 50003;
 
-  // The base HTTP path for the entity collection.
-  // If unset, it will be derived from the package and message name,
-  // e.g., "/v1/books" for package "library.v1" and message "Book".
-  string base_path = 50004;
+  // The resource path pattern for this entity, with variable placeholders
+  // referencing primary key field names.
+  // Example: "accounts/{account_id}/regions/{region_id}/dataSources/{data_source_id}"
+  // If unset, it defaults to "/<package_path>/<entity_name>s/{pk1=*}/{pk2=*}/...".
+  // The collection path (for List/Create) is derived by stripping the last
+  // "/{variable}" segment.
+  string resource_path = 50004;
 
   // The resource type name for google.api.resource.
   // If unset, it defaults to "<package_name>/<MessageName>".

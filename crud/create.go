@@ -66,6 +66,11 @@ type CreateHandler[E proto.Message, Req proto.Message] struct {
 	queryFn func(ctx context.Context, query string, args ...any) (sqlRows, error)
 }
 
+type NamedProto interface {
+	proto.Message;
+	GetName() string;
+}
+
 // NewCreateHandler initializes the handler, computing table names, column mappings,
 // and validation rules once during startup.
 func NewCreateHandler[E proto.Message, Req proto.Message](db DBExecutor, backend sqldialect.BackendType) (*CreateHandler[E, Req], error) {
