@@ -30,7 +30,7 @@ service UpdateOnlyUserService {
   // UpdateUpdateOnlyUser updates a UpdateOnlyUser.
   rpc UpdateUpdateOnlyUser(UpdateUpdateOnlyUserRequest) returns (UpdateOnlyUser) {
     option (google.api.http) = {
-      patch: "/testdata/v1/update_only_users/{id=*}"
+      patch: "/testdata/v1/update_only_users"
       body: "update_only_user"
     };
     option (google.api.method_signature) = "update_only_user,update_mask";

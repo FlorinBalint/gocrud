@@ -96,10 +96,6 @@ message UpdateOptionsOverrideUserRequest {
 message UpsertOptionsOverrideUserRequest {
   // The OptionsOverrideUser resource to upsert.
   OptionsOverrideUser options_override_user = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // The list of fields to update.
-  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
-
 }
 
 // DeleteOptionsOverrideUserRequest is the request message for OptionsOverrideUserService.DeleteOptionsOverrideUser.
@@ -148,7 +144,7 @@ service OptionsOverrideUserService {
   // UpdateOptionsOverrideUser updates a OptionsOverrideUser.
   rpc UpdateOptionsOverrideUser(UpdateOptionsOverrideUserRequest) returns (OptionsOverrideUser) {
     option (google.api.http) = {
-      patch: "/api/v2/accounts/{account_id}/custom_users/{id}"
+      patch: "/api/v2/accounts/{account_id}/custom_users"
       body: "options_override_user"
     };
     option (google.api.method_signature) = "options_override_user,update_mask";
@@ -157,10 +153,10 @@ service OptionsOverrideUserService {
   // UpsertOptionsOverrideUser upserts a OptionsOverrideUser.
   rpc UpsertOptionsOverrideUser(UpsertOptionsOverrideUserRequest) returns (OptionsOverrideUser) {
     option (google.api.http) = {
-      put: "/api/v2/accounts/{account_id}/custom_users/{id}"
+      put: "/api/v2/accounts/{account_id}/custom_users"
       body: "options_override_user"
     };
-    option (google.api.method_signature) = "options_override_user,update_mask";
+    option (google.api.method_signature) = "options_override_user";
   }
 
   // DeleteOptionsOverrideUser deletes a OptionsOverrideUser.

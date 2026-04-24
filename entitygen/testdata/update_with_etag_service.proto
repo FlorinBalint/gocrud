@@ -33,9 +33,9 @@ service UpdateWithEtagUserService {
   // UpdateUpdateWithEtagUser updates a UpdateWithEtagUser.
   rpc UpdateUpdateWithEtagUser(UpdateUpdateWithEtagUserRequest) returns (UpdateWithEtagUser) {
     option (google.api.http) = {
-      patch: "/testdata/v1/update_with_etag_users/{id=*}"
+      patch: "/testdata/v1/update_with_etag_users"
       body: "update_with_etag_user"
     };
-    option (google.api.method_signature) = "update_with_etag_user,update_mask";
+    option (google.api.method_signature) = "update_with_etag_user,update_mask,etag";
   }
 }

@@ -93,10 +93,6 @@ message UpdateBookRequest {
 message UpsertBookRequest {
   // The Book resource to upsert.
   Book book = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // The list of fields to update.
-  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
-
 }
 
 // DeleteBookRequest is the request message for BookService.DeleteBook.
@@ -145,7 +141,7 @@ service BookService {
   // UpdateBook updates a Book.
   rpc UpdateBook(UpdateBookRequest) returns (Book) {
     option (google.api.http) = {
-      patch: "/library/v1/books/{book_id=*}"
+      patch: "/library/v1/books"
       body: "book"
     };
     option (google.api.method_signature) = "book,update_mask";
@@ -154,10 +150,10 @@ service BookService {
   // UpsertBook upserts a Book.
   rpc UpsertBook(UpsertBookRequest) returns (Book) {
     option (google.api.http) = {
-      put: "/library/v1/books/{book_id=*}"
+      put: "/library/v1/books"
       body: "book"
     };
-    option (google.api.method_signature) = "book,update_mask";
+    option (google.api.method_signature) = "book";
   }
 
   // DeleteBook deletes a Book.

@@ -96,10 +96,6 @@ message UpdateAutogenUserRequest {
 message UpsertAutogenUserRequest {
   // The AutogenUser resource to upsert.
   AutogenUser autogen_user = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // The list of fields to update.
-  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
-
 }
 
 // DeleteAutogenUserRequest is the request message for AutogenUserService.DeleteAutogenUser.
@@ -148,7 +144,7 @@ service AutogenUserService {
   // UpdateAutogenUser updates a AutogenUser.
   rpc UpdateAutogenUser(UpdateAutogenUserRequest) returns (AutogenUser) {
     option (google.api.http) = {
-      patch: "/testdata/v1/autogen_users/{id_1=*}/{id_2=*}/{id_3=*}"
+      patch: "/testdata/v1/autogen_users"
       body: "autogen_user"
     };
     option (google.api.method_signature) = "autogen_user,update_mask";
@@ -157,10 +153,10 @@ service AutogenUserService {
   // UpsertAutogenUser upserts a AutogenUser.
   rpc UpsertAutogenUser(UpsertAutogenUserRequest) returns (AutogenUser) {
     option (google.api.http) = {
-      put: "/testdata/v1/autogen_users/{id_1=*}/{id_2=*}/{id_3=*}"
+      put: "/testdata/v1/autogen_users"
       body: "autogen_user"
     };
-    option (google.api.method_signature) = "autogen_user,update_mask";
+    option (google.api.method_signature) = "autogen_user";
   }
 
   // DeleteAutogenUser deletes a AutogenUser.

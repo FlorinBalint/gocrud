@@ -111,11 +111,7 @@ message Update{{.Name}}Request {
 // Upsert{{.Name}}Request is the request message for {{.Name}}Service.Upsert{{.Name}}.
 message Upsert{{.Name}}Request {
   // The {{.Name}} resource to upsert.
-  {{.Name}} {{.SnakeName}} = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // The list of fields to update.
-  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
-{{if .HasEtag}}
+  {{.Name}} {{.SnakeName}} = 1 [(google.api.field_behavior) = REQUIRED];{{if .HasEtag}}
   // The etag for concurrency control.
   // If provided, the update will only succeed if the entity's current etag matches this value.
   string etag = 3;
@@ -183,10 +179,10 @@ service {{.Name}}Service {
   // Update{{.Name}} updates a {{.Name}}.
   rpc Update{{.Name}}(Update{{.Name}}Request) returns ({{.Name}}) {
     option (google.api.http) = {
-      patch: "{{.ResourcePath}}"
+      patch: "{{.BasePath}}"
       body: "{{.SnakeName}}"
     };
-    option (google.api.method_signature) = "{{.SnakeName}},update_mask";
+    option (google.api.method_signature) = "{{.SnakeName}},update_mask{{if .HasEtag}},etag{{end}}";
   }
 {{- end}}
 {{- if .HasMethod "UPSERT"}}
@@ -194,10 +190,10 @@ service {{.Name}}Service {
   // Upsert{{.Name}} upserts a {{.Name}}.
   rpc Upsert{{.Name}}(Upsert{{.Name}}Request) returns ({{.Name}}) {
     option (google.api.http) = {
-      put: "{{.ResourcePath}}"
+      put: "{{.BasePath}}"
       body: "{{.SnakeName}}"
     };
-    option (google.api.method_signature) = "{{.SnakeName}},update_mask";
+    option (google.api.method_signature) = "{{.SnakeName}}{{if .HasEtag}},etag{{end}}";
   }
 {{- end}}
 {{- if .HasMethod "DELETE"}}

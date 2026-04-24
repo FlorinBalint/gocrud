@@ -59,10 +59,6 @@ message ListListUpsertDeleteWithEtagUsersResponse {
 message UpsertListUpsertDeleteWithEtagUserRequest {
   // The ListUpsertDeleteWithEtagUser resource to upsert.
   ListUpsertDeleteWithEtagUser list_upsert_delete_with_etag_user = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // The list of fields to update.
-  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
-
   // The etag for concurrency control.
   // If provided, the update will only succeed if the entity's current etag matches this value.
   string etag = 3;
@@ -103,10 +99,10 @@ service ListUpsertDeleteWithEtagUserService {
   // UpsertListUpsertDeleteWithEtagUser upserts a ListUpsertDeleteWithEtagUser.
   rpc UpsertListUpsertDeleteWithEtagUser(UpsertListUpsertDeleteWithEtagUserRequest) returns (ListUpsertDeleteWithEtagUser) {
     option (google.api.http) = {
-      put: "/testdata/v1/list_upsert_delete_with_etag_users/{id=*}"
+      put: "/testdata/v1/list_upsert_delete_with_etag_users"
       body: "list_upsert_delete_with_etag_user"
     };
-    option (google.api.method_signature) = "list_upsert_delete_with_etag_user,update_mask";
+    option (google.api.method_signature) = "list_upsert_delete_with_etag_user,etag";
   }
 
   // DeleteListUpsertDeleteWithEtagUser deletes a ListUpsertDeleteWithEtagUser.

@@ -96,10 +96,6 @@ message UpdateUserRequest {
 message UpsertUserRequest {
   // The User resource to upsert.
   User user = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // The list of fields to update.
-  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
-
 }
 
 // DeleteUserRequest is the request message for UserService.DeleteUser.
@@ -148,7 +144,7 @@ service UserService {
   // UpdateUser updates a User.
   rpc UpdateUser(UpdateUserRequest) returns (User) {
     option (google.api.http) = {
-      patch: "/mypackage/v1/users/{org_id=*}/{user_id=*}"
+      patch: "/mypackage/v1/users"
       body: "user"
     };
     option (google.api.method_signature) = "user,update_mask";
@@ -157,10 +153,10 @@ service UserService {
   // UpsertUser upserts a User.
   rpc UpsertUser(UpsertUserRequest) returns (User) {
     option (google.api.http) = {
-      put: "/mypackage/v1/users/{org_id=*}/{user_id=*}"
+      put: "/mypackage/v1/users"
       body: "user"
     };
-    option (google.api.method_signature) = "user,update_mask";
+    option (google.api.method_signature) = "user";
   }
 
   // DeleteUser deletes a User.

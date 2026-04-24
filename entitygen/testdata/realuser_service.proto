@@ -93,10 +93,6 @@ message UpdateRealUserRequest {
 message UpsertRealUserRequest {
   // The RealUser resource to upsert.
   RealUser real_user = 1 [(google.api.field_behavior) = REQUIRED];
-
-  // The list of fields to update.
-  google.protobuf.FieldMask update_mask = 2 [(google.api.field_behavior) = OPTIONAL];
-
 }
 
 // DeleteRealUserRequest is the request message for RealUserService.DeleteRealUser.
@@ -145,7 +141,7 @@ service RealUserService {
   // UpdateRealUser updates a RealUser.
   rpc UpdateRealUser(UpdateRealUserRequest) returns (RealUser) {
     option (google.api.http) = {
-      patch: "/testdata/v1/real_users/{id=*}"
+      patch: "/testdata/v1/real_users"
       body: "real_user"
     };
     option (google.api.method_signature) = "real_user,update_mask";
@@ -154,10 +150,10 @@ service RealUserService {
   // UpsertRealUser upserts a RealUser.
   rpc UpsertRealUser(UpsertRealUserRequest) returns (RealUser) {
     option (google.api.http) = {
-      put: "/testdata/v1/real_users/{id=*}"
+      put: "/testdata/v1/real_users"
       body: "real_user"
     };
-    option (google.api.method_signature) = "real_user,update_mask";
+    option (google.api.method_signature) = "real_user";
   }
 
   // DeleteRealUser deletes a RealUser.
