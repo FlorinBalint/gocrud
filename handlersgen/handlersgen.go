@@ -89,6 +89,10 @@ type handlerData struct {
 	AutoGenFields []fieldInfo
 	// InsertFields lists fields included in the INSERT (all except auto-generated).
 	InsertFields []fieldInfo
+	// AllKeys are all PK fields (provided + auto-generated), sorted by PKOrder.
+	AllKeys []fieldInfo
+	// UpdateFields are non-PK fields that can be updated.
+	UpdateFields []fieldInfo
 
 	// Methods lists the CRUD methods to generate handlers for.
 	Methods []entity.Method
@@ -224,6 +228,17 @@ func GenerateHandlers(desc protoreflect.MessageDescriptor, entityImportPath stri
 
 	sort.Slice(providedKeys, func(i, j int) bool { return providedKeys[i].PKOrder < providedKeys[j].PKOrder })
 
+	var allKeys, updateFields []fieldInfo
+	for i := range allFields {
+		f := &allFields[i]
+		if f.IsPK {
+			allKeys = append(allKeys, *f)
+		} else {
+			updateFields = append(updateFields, *f)
+		}
+	}
+	sort.SliceStable(allKeys, func(i, j int) bool { return allKeys[i].PKOrder < allKeys[j].PKOrder })
+
 	data := handlerData{
 		EntityName:    name,
 		EntityGoType:  importAlias + "." + name,
@@ -236,6 +251,8 @@ func GenerateHandlers(desc protoreflect.MessageDescriptor, entityImportPath stri
 		AutoGenPK:     autoGenPK,
 		AutoGenFields: autoGenFields,
 		InsertFields:  insertFields,
+		AllKeys:       allKeys,
+		UpdateFields:  updateFields,
 		Methods:       methods,
 	}
 
@@ -258,6 +275,17 @@ func GenerateHandlers(desc protoreflect.MessageDescriptor, entityImportPath stri
 		}
 		files = append(files, GeneratedFile{
 			Filename: "create_" + entityLower + ".go",
+			Content:  buf.String(),
+		})
+	}
+
+	if data.HasMethod("UPDATE") {
+		buf.Reset()
+		if err := updateTmpl.Execute(&buf, data); err != nil {
+			return nil, fmt.Errorf("handlersgen: executing update template: %w", err)
+		}
+		files = append(files, GeneratedFile{
+			Filename: "update_" + entityLower + ".go",
 			Content:  buf.String(),
 		})
 	}

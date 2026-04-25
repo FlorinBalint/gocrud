@@ -117,3 +117,17 @@ message Event {
   google.type.Decimal price = 5;
   google.type.TimeOfDay alarm_time = 6;
 }
+
+message Product {
+  option (gocrud.entity.entity) = true;
+  option (gocrud.entity.methods) = CREATE;
+  option (gocrud.entity.methods) = UPDATE;
+
+  string id = 1 [(gocrud.entity.primary_key) = 1];
+  string name = 2;
+  string description = 3;
+  google.type.Decimal price = 4;
+  int32 quantity = 5;
+  bool available = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}

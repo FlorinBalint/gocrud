@@ -49,14 +49,21 @@ func TestGenerateHandlers_RealProto(t *testing.T) {
 		{"RealUser", map[string]string{
 			"types.go":           "types.go",
 			"create_realuser.go": "create_realuser.go",
+			"update_realuser.go": "update_realuser.go",
 		}},
 		{"AutogenUser", map[string]string{
 			"types.go":              "types.go",
 			"create_autogenuser.go": "create_autogenuser.go",
+			"update_autogenuser.go": "update_autogenuser.go",
 		}},
 		{"Event", map[string]string{
 			"types.go":        "types.go",
 			"create_event.go": "create_event.go",
+		}},
+		{"Product", map[string]string{
+			"types.go":           "types.go",
+			"create_product.go":  "create_product.go",
+			"update_product.go":  "update_product.go",
 		}},
 	}
 

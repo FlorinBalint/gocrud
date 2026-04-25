@@ -3,6 +3,7 @@ package handlersgen
 import (
 	_ "embed"
 	"fmt"
+	"strings"
 	"text/template"
 )
 
@@ -11,6 +12,9 @@ var typesTemplateContent string
 
 //go:embed templates/create.go.tmpl
 var createTemplateContent string
+
+//go:embed templates/update.go.tmpl
+var updateTemplateContent string
 
 func setFromScanVarfunc(goType, goName string, idx int) string {
 		varName := fmt.Sprintf("autoGen%d", idx)
@@ -58,12 +62,57 @@ func zeroLiteral(goType string) string {
 		}
 	}
 
+// pkCondition generates a multi-line Go source for a *gocrudv1.Condition literal.
+// The indent parameter is the indentation of the opening &gocrudv1.Condition{ line.
+func pkCondition(k fieldInfo, indent string) string {
+	val := sqlValueExpr(k.GoType, "entity.Get"+k.GoName+"()")
+	return fmt.Sprintf("&gocrudv1.Condition{\n"+
+		"%s\tColumn: %q,\n"+
+		"%s\tOp:     gocrudv1.Operator_EQUAL,\n"+
+		"%s\tValue:  %s,\n"+
+		"%s}", indent, k.ColName, indent, indent, val, indent)
+}
+
+// pkFilter generates Go source code that constructs a *gocrudv1.Filter
+// from the given primary key fields. A single key produces a simple Condition;
+// multiple keys produce a CompositeFilter with AND.
+func pkFilter(keys []fieldInfo) string {
+	if len(keys) == 1 {
+		return fmt.Sprintf("&gocrudv1.Filter{\n"+
+			"\t\tFilter: &gocrudv1.Filter_Condition{\n"+
+			"\t\t\tCondition: %s,\n"+
+			"\t\t},\n"+
+			"\t}", pkCondition(keys[0], "\t\t\t"))
+	}
+	var entries []string
+	for _, k := range keys {
+		entries = append(entries, fmt.Sprintf(
+			"\t\t\t\t\t{\n"+
+				"\t\t\t\t\t\tFilter: &gocrudv1.Filter_Condition{\n"+
+				"\t\t\t\t\t\t\tCondition: %s,\n"+
+				"\t\t\t\t\t\t},\n"+
+				"\t\t\t\t\t}", pkCondition(k, "\t\t\t\t\t\t\t")))
+	}
+	return "&gocrudv1.Filter{\n" +
+		"\t\tFilter: &gocrudv1.Filter_Composite{\n" +
+		"\t\t\tComposite: &gocrudv1.CompositeFilter{\n" +
+		"\t\t\t\tOp: gocrudv1.CompositeFilter_AND,\n" +
+		"\t\t\t\tFilters: []*gocrudv1.Filter{\n" +
+		strings.Join(entries, ",\n") + ",\n" +
+		"\t\t\t\t},\n" +
+		"\t\t\t},\n" +
+		"\t\t},\n" +
+		"\t}"
+}
+
 var handlersFuncMap = template.FuncMap{
-	"sub": func(a, b int) int { return a - b },
-	"zeroLiteral": zeroLiteral,
+	"sub":            func(a, b int) int { return a - b },
+	"zeroLiteral":    zeroLiteral,
 	"setFromScanVar": setFromScanVarfunc,
-	"castFromInt64": castFromInt64,
+	"castFromInt64":  castFromInt64,
+	"pkFilter":       pkFilter,
 }
 
 var typesTmpl = template.Must(template.New("types").Parse(typesTemplateContent))
 var createTmpl = template.Must(template.New("create").Funcs(handlersFuncMap).Parse(createTemplateContent))
+var updateTmpl = template.Must(template.New("update").Funcs(handlersFuncMap).Parse(updateTemplateContent))

@@ -9,6 +9,7 @@ go_library(
     embedsrcs = [
         "templates/types.go.tmpl",
         "templates/create.go.tmpl",
+        "templates/update.go.tmpl",
     ],
     importpath = "github.com/FlorinBalint/gocrud/handlersgen",
     visibility = ["//visibility:public"],
