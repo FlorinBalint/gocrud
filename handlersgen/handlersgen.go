@@ -408,25 +408,25 @@ func protoKindToScanType(f protoreflect.FieldDescriptor) string {
 func sqlValueExpr(goType, accessor string) string {
 	switch goType {
 	case "string":
-		return fmt.Sprintf("&gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: %s}}", accessor)
+		return fmt.Sprintf("stringValue(%s)", accessor)
 	case "int32", "int64", "uint32", "uint64":
-		return fmt.Sprintf("&gocrudv1.Value{Kind: &gocrudv1.Value_IntValue{IntValue: int64(%s)}}", accessor)
+		return fmt.Sprintf("intValue(%s)", accessor)
 	case "float32", "float64":
-		return fmt.Sprintf("&gocrudv1.Value{Kind: &gocrudv1.Value_DoubleValue{DoubleValue: float64(%s)}}", accessor)
+		return fmt.Sprintf("doubleValue(%s)", accessor)
 	case "bool":
-		return fmt.Sprintf("&gocrudv1.Value{Kind: &gocrudv1.Value_BoolValue{BoolValue: %s}}", accessor)
+		return fmt.Sprintf("boolValue(%s)", accessor)
 	case "[]byte":
-		return fmt.Sprintf("&gocrudv1.Value{Kind: &gocrudv1.Value_BytesValue{BytesValue: %s}}", accessor)
+		return fmt.Sprintf("bytesValue(%s)", accessor)
 	case "timestamp":
-		return fmt.Sprintf("&gocrudv1.Value{Kind: &gocrudv1.Value_TimestampValue{TimestampValue: %s}}", accessor)
+		return fmt.Sprintf("timestampValue(%s)", accessor)
 	case "date":
-		return fmt.Sprintf("&gocrudv1.Value{Kind: &gocrudv1.Value_DateValue{DateValue: %s}}", accessor)
+		return fmt.Sprintf("dateValue(%s)", accessor)
 	case "duration":
-		return fmt.Sprintf("&gocrudv1.Value{Kind: &gocrudv1.Value_IntervalValue{IntervalValue: %s}}", accessor)
+		return fmt.Sprintf("durationValue(%s)", accessor)
 	case "decimal":
-		return fmt.Sprintf("&gocrudv1.Value{Kind: &gocrudv1.Value_DecimalValue{DecimalValue: %s}}", accessor)
+		return fmt.Sprintf("decimalValue(%s)", accessor)
 	case "timeofday":
-		return fmt.Sprintf("&gocrudv1.Value{Kind: &gocrudv1.Value_TimeValue{TimeValue: %s}}", accessor)
+		return fmt.Sprintf("timeOfDayValue(%s)", accessor)
 	default:
 		return "nil"
 	}

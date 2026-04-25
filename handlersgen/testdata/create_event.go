@@ -47,12 +47,12 @@ func (h *EventCreateHandler) Create(ctx context.Context, req *testdata.CreateEve
 	// Build INSERT values for non-auto-generated fields.
 	columns := []string{"id", "commit_timestamp", "date_of_birth", "duration", "price", "alarm_time"}
 	values := []*gocrudv1.Value{
-		&gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: entity.GetId()}},
-		&gocrudv1.Value{Kind: &gocrudv1.Value_TimestampValue{TimestampValue: entity.GetCommitTimestamp()}},
-		&gocrudv1.Value{Kind: &gocrudv1.Value_DateValue{DateValue: entity.GetDateOfBirth()}},
-		&gocrudv1.Value{Kind: &gocrudv1.Value_IntervalValue{IntervalValue: entity.GetDuration()}},
-		&gocrudv1.Value{Kind: &gocrudv1.Value_DecimalValue{DecimalValue: entity.GetPrice()}},
-		&gocrudv1.Value{Kind: &gocrudv1.Value_TimeValue{TimeValue: entity.GetAlarmTime()}},
+		stringValue(entity.GetId()),
+		timestampValue(entity.GetCommitTimestamp()),
+		dateValue(entity.GetDateOfBirth()),
+		durationValue(entity.GetDuration()),
+		decimalValue(entity.GetPrice()),
+		timeOfDayValue(entity.GetAlarmTime()),
 	}
 
 	var returningCols []string

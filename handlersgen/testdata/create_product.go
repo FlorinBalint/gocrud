@@ -43,13 +43,13 @@ func (h *ProductCreateHandler) Create(ctx context.Context, req *testdata.CreateP
 	// Build INSERT values for non-auto-generated fields.
 	columns := []string{"id", "name", "description", "price", "quantity", "available", "updated_at"}
 	values := []*gocrudv1.Value{
-		&gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: entity.GetId()}},
-		&gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: entity.GetName()}},
-		&gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: entity.GetDescription()}},
-		&gocrudv1.Value{Kind: &gocrudv1.Value_DecimalValue{DecimalValue: entity.GetPrice()}},
-		&gocrudv1.Value{Kind: &gocrudv1.Value_IntValue{IntValue: int64(entity.GetQuantity())}},
-		&gocrudv1.Value{Kind: &gocrudv1.Value_BoolValue{BoolValue: entity.GetAvailable()}},
-		&gocrudv1.Value{Kind: &gocrudv1.Value_TimestampValue{TimestampValue: entity.GetUpdatedAt()}},
+		stringValue(entity.GetId()),
+		stringValue(entity.GetName()),
+		stringValue(entity.GetDescription()),
+		decimalValue(entity.GetPrice()),
+		intValue(entity.GetQuantity()),
+		boolValue(entity.GetAvailable()),
+		timestampValue(entity.GetUpdatedAt()),
 	}
 
 	var returningCols []string

@@ -135,7 +135,7 @@ func (h *AutogenUserUpdateHandler) buildColumnUpdates(entity *testdata.AutogenUs
 		updates = append(updates, &gocrudv1.ColumnUpdate{
 			Column: "email",
 			Assignment: &gocrudv1.ColumnUpdate_Value{
-				Value: &gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: entity.GetEmail()}},
+				Value: stringValue(entity.GetEmail()),
 			},
 		})
 	}
@@ -154,7 +154,7 @@ func (h *AutogenUserUpdateHandler) primaryKeyFilter(entity *testdata.AutogenUser
 							Condition: &gocrudv1.Condition{
 								Column: "id_1",
 								Op:     gocrudv1.Operator_EQUAL,
-								Value:  &gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: entity.GetId_1()}},
+								Value:  stringValue(entity.GetId_1()),
 							},
 						},
 					},
@@ -163,7 +163,7 @@ func (h *AutogenUserUpdateHandler) primaryKeyFilter(entity *testdata.AutogenUser
 							Condition: &gocrudv1.Condition{
 								Column: "id_2",
 								Op:     gocrudv1.Operator_EQUAL,
-								Value:  &gocrudv1.Value{Kind: &gocrudv1.Value_IntValue{IntValue: int64(entity.GetId_2())}},
+								Value:  intValue(entity.GetId_2()),
 							},
 						},
 					},
@@ -172,7 +172,7 @@ func (h *AutogenUserUpdateHandler) primaryKeyFilter(entity *testdata.AutogenUser
 							Condition: &gocrudv1.Condition{
 								Column: "id_3",
 								Op:     gocrudv1.Operator_EQUAL,
-								Value:  &gocrudv1.Value{Kind: &gocrudv1.Value_IntValue{IntValue: int64(entity.GetId_3())}},
+								Value:  intValue(entity.GetId_3()),
 							},
 						},
 					},

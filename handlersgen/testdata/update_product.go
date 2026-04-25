@@ -128,7 +128,7 @@ func (h *ProductUpdateHandler) buildColumnUpdates(entity *testdata.Product, mask
 		updates = append(updates, &gocrudv1.ColumnUpdate{
 			Column: "name",
 			Assignment: &gocrudv1.ColumnUpdate_Value{
-				Value: &gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: entity.GetName()}},
+				Value: stringValue(entity.GetName()),
 			},
 		})
 	}
@@ -136,7 +136,7 @@ func (h *ProductUpdateHandler) buildColumnUpdates(entity *testdata.Product, mask
 		updates = append(updates, &gocrudv1.ColumnUpdate{
 			Column: "description",
 			Assignment: &gocrudv1.ColumnUpdate_Value{
-				Value: &gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: entity.GetDescription()}},
+				Value: stringValue(entity.GetDescription()),
 			},
 		})
 	}
@@ -144,7 +144,7 @@ func (h *ProductUpdateHandler) buildColumnUpdates(entity *testdata.Product, mask
 		updates = append(updates, &gocrudv1.ColumnUpdate{
 			Column: "price",
 			Assignment: &gocrudv1.ColumnUpdate_Value{
-				Value: &gocrudv1.Value{Kind: &gocrudv1.Value_DecimalValue{DecimalValue: entity.GetPrice()}},
+				Value: decimalValue(entity.GetPrice()),
 			},
 		})
 	}
@@ -152,7 +152,7 @@ func (h *ProductUpdateHandler) buildColumnUpdates(entity *testdata.Product, mask
 		updates = append(updates, &gocrudv1.ColumnUpdate{
 			Column: "quantity",
 			Assignment: &gocrudv1.ColumnUpdate_Value{
-				Value: &gocrudv1.Value{Kind: &gocrudv1.Value_IntValue{IntValue: int64(entity.GetQuantity())}},
+				Value: intValue(entity.GetQuantity()),
 			},
 		})
 	}
@@ -160,7 +160,7 @@ func (h *ProductUpdateHandler) buildColumnUpdates(entity *testdata.Product, mask
 		updates = append(updates, &gocrudv1.ColumnUpdate{
 			Column: "available",
 			Assignment: &gocrudv1.ColumnUpdate_Value{
-				Value: &gocrudv1.Value{Kind: &gocrudv1.Value_BoolValue{BoolValue: entity.GetAvailable()}},
+				Value: boolValue(entity.GetAvailable()),
 			},
 		})
 	}
@@ -168,7 +168,7 @@ func (h *ProductUpdateHandler) buildColumnUpdates(entity *testdata.Product, mask
 		updates = append(updates, &gocrudv1.ColumnUpdate{
 			Column: "updated_at",
 			Assignment: &gocrudv1.ColumnUpdate_Value{
-				Value: &gocrudv1.Value{Kind: &gocrudv1.Value_TimestampValue{TimestampValue: entity.GetUpdatedAt()}},
+				Value: timestampValue(entity.GetUpdatedAt()),
 			},
 		})
 	}
@@ -182,7 +182,7 @@ func (h *ProductUpdateHandler) primaryKeyFilter(entity *testdata.Product) *gocru
 			Condition: &gocrudv1.Condition{
 				Column: "id",
 				Op:     gocrudv1.Operator_EQUAL,
-				Value:  &gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: entity.GetId()}},
+				Value:  stringValue(entity.GetId()),
 			},
 		},
 	}

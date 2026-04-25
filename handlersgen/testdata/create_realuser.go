@@ -43,8 +43,8 @@ func (h *RealUserCreateHandler) Create(ctx context.Context, req *testdata.Create
 	// Build INSERT values for non-auto-generated fields.
 	columns := []string{"id", "email"}
 	values := []*gocrudv1.Value{
-		&gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: entity.GetId()}},
-		&gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: entity.GetEmail()}},
+		stringValue(entity.GetId()),
+		stringValue(entity.GetEmail()),
 	}
 
 	var returningCols []string

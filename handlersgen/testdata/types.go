@@ -5,6 +5,12 @@ package handlers
 import (
 	"context"
 	"database/sql"
+
+  "google.golang.org/genproto/googleapis/type/date"
+	"google.golang.org/genproto/googleapis/type/decimal"
+	"google.golang.org/genproto/googleapis/type/timeofday"
+  "google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 // DBExecutor is the interface for executing SQL queries.
@@ -12,4 +18,44 @@ import (
 type DBExecutor interface {
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+}
+
+func intValue(i int64) *gocrudv1.Value {
+  return &gocrudv1.Value{Kind: &gocrudv1.Value_IntValue{IntValue: i}}
+}
+
+func doubleValue(f float64) *gocrudv1.Value {
+  return &gocrudv1.Value{Kind: &gocrudv1.Value_DoubleValue{DoubleValue: f}}
+}
+
+func stringValue(s string) *gocrudv1.Value {
+  return &gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: s}}
+}
+
+func boolValue(b bool) *gocrudv1.Value {
+  return &gocrudv1.Value{Kind: &gocrudv1.Value_BoolValue{BoolValue: b}}
+}
+
+func bytesValue(b []byte) *gocrudv1.Value {
+  return &gocrudv1.Value{Kind: &gocrudv1.Value_BytesValue{BytesValue: b}}
+}
+
+func timestampValue(t *timestamppb.Timestamp) *gocrudv1.Value {
+  return &gocrudv1.Value{Kind: &gocrudv1.Value_TimestampValue{TimestampValue: t}}
+}
+
+func dateValue(d *date.Date) *gocrudv1.Value {
+  return &gocrudv1.Value{Kind: &gocrudv1.Value_DateValue{DateValue: d}}
+}
+
+func timeOfDayValue(t *timeofday.TimeOfDay) *gocrudv1.Value {
+  return &gocrudv1.Value{Kind: &gocrudv1.Value_TimeValue{TimeValue: t}}
+}
+
+func decimalValue(d *decimal.Decimal) *gocrudv1.Value {
+  return &gocrudv1.Value{Kind: &gocrudv1.Value_DecimalValue{DecimalValue: d}}
+}
+
+func durationValue(d *durationpb.Duration) *gocrudv1.Value {
+  return &gocrudv1.Value{Kind: &gocrudv1.Value_DurationValue{IntervalValue: d}}
 }

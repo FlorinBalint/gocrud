@@ -47,9 +47,9 @@ func (h *AutogenUserCreateHandler) Create(ctx context.Context, req *testdata.Cre
 	// Build INSERT values for non-auto-generated fields.
 	columns := []string{"id_1", "id_2", "email"}
 	values := []*gocrudv1.Value{
-		&gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: entity.GetId_1()}},
-		&gocrudv1.Value{Kind: &gocrudv1.Value_IntValue{IntValue: int64(entity.GetId_2())}},
-		&gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: entity.GetEmail()}},
+		stringValue(entity.GetId_1()),
+		intValue(entity.GetId_2()),
+		stringValue(entity.GetEmail()),
 	}
 
 	// RETURNING for auto-generated columns.

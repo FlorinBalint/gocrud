@@ -123,7 +123,7 @@ func (h *RealUserUpdateHandler) buildColumnUpdates(entity *testdata.RealUser, ma
 		updates = append(updates, &gocrudv1.ColumnUpdate{
 			Column: "email",
 			Assignment: &gocrudv1.ColumnUpdate_Value{
-				Value: &gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: entity.GetEmail()}},
+				Value: stringValue(entity.GetEmail()),
 			},
 		})
 	}
@@ -137,7 +137,7 @@ func (h *RealUserUpdateHandler) primaryKeyFilter(entity *testdata.RealUser) *goc
 			Condition: &gocrudv1.Condition{
 				Column: "id",
 				Op:     gocrudv1.Operator_EQUAL,
-				Value:  &gocrudv1.Value{Kind: &gocrudv1.Value_StringValue{StringValue: entity.GetId()}},
+				Value:  stringValue(entity.GetId()),
 			},
 		},
 	}
