@@ -230,6 +230,21 @@ func (b *baseBuilder) BuildUpdate(q UpdateQuery) (string, []any, error) {
 		}
 	}
 
+	if len(q.Returning()) > 0 {
+		if !b.cfg.supportsReturning {
+			return "", nil, fmt.Errorf("backend does not support RETURNING clause")
+		}
+		retCols := make([]string, len(q.Returning()))
+		for i, c := range q.Returning() {
+			qc, err := b.cfg.quoteIdent(c)
+			if err != nil {
+				return "", nil, fmt.Errorf("invalid returning column name: %w", err)
+			}
+			retCols[i] = qc
+		}
+		fmt.Fprintf(&sb, " RETURNING %s", strings.Join(retCols, ", "))
+	}
+
 	return sb.String(), args, nil
 }
 
@@ -254,7 +269,23 @@ func (b *baseBuilder) BuildDelete(q DeleteQuery) (string, []any, error) {
 		return "", nil, fmt.Errorf("DELETE: filter resolved to an empty WHERE clause; refusing to delete all rows")
 	}
 
-	return fmt.Sprintf("DELETE FROM %s WHERE %s", quotedTable, where), args, nil
+	sql := fmt.Sprintf("DELETE FROM %s WHERE %s", quotedTable, where)
+	if len(q.Returning()) > 0 {
+		if !b.cfg.supportsReturning {
+			return "", nil, fmt.Errorf("backend does not support RETURNING clause")
+		}
+		retCols := make([]string, len(q.Returning()))
+		for i, c := range q.Returning() {
+			qc, err := b.cfg.quoteIdent(c)
+			if err != nil {
+				return "", nil, fmt.Errorf("invalid returning column name: %w", err)
+			}
+			retCols[i] = qc
+		}
+		sql += " RETURNING " + strings.Join(retCols, ", ")
+	}
+
+	return sql, args, nil
 }
 
 // ---------------------------------------------------------------------------

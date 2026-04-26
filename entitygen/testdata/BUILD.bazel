@@ -9,14 +9,28 @@ filegroup(
 
 proto_library(
     name = "testdata_proto",
-    srcs = ["entities.proto"],
+    srcs = [
+        "entities.proto",
+        "audit_log_service.proto",
+        "autogen_user_service.proto",
+        "realuser_service.proto",
+        "event_service.proto",
+        "product_service.proto",
+    ],
     visibility = ["//visibility:public"],
     deps = [
         "//proto/entity:options_proto",
+        "//proto/v1:query_proto",
+        "@googleapis//google/api:annotations_proto",
+        "@googleapis//google/api:client_proto",
+        "@googleapis//google/api:field_behavior_proto",
+        "@googleapis//google/api:resource_proto",
         "@googleapis//google/type:date_proto",
         "@googleapis//google/type:decimal_proto",
         "@googleapis//google/type:timeofday_proto",
         "@protobuf//:duration_proto",
+        "@protobuf//:empty_proto",
+        "@protobuf//:field_mask_proto",
         "@protobuf//:timestamp_proto",
     ],
 )
@@ -28,8 +42,10 @@ go_proto_library(
     visibility = ["//visibility:public"],
     deps = [
         "//proto/entity:options_go_proto",
-        "@googleapis//google/type:date_go_proto",
-        "@googleapis//google/type:decimal_go_proto",
-        "@googleapis//google/type:timeofday_go_proto",
+        "//proto/v1:query_go_proto",
+        "@googleapis//google/api:annotations_go_proto",
+        "@org_golang_google_genproto//googleapis/type/date",
+        "@org_golang_google_genproto//googleapis/type/decimal",
+        "@org_golang_google_genproto//googleapis/type/timeofday",
     ],
 )

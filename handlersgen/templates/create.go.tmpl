@@ -4,7 +4,27 @@ package {{.Package}}
 
 import (
 	"context"
-
+{{- if .AutoGenFields}}
+	"database/sql"
+{{- end}}
+{{- if or .HasTimestamp .HasDate .HasTimeOfDay .HasDuration}}
+	"time"
+{{- end}}
+{{- if .HasDate}}
+	"google.golang.org/genproto/googleapis/type/date"
+{{- end}}
+{{- if .HasDecimal}}
+	"google.golang.org/genproto/googleapis/type/decimal"
+{{- end}}
+{{- if .HasTimeOfDay}}
+	"google.golang.org/genproto/googleapis/type/timeofday"
+{{- end}}
+{{- if .HasDuration}}
+	"google.golang.org/protobuf/types/known/durationpb"
+{{- end}}
+{{- if .HasTimestamp}}
+	"google.golang.org/protobuf/types/known/timestamppb"
+{{- end}}
 	{{.ImportAlias}} "{{.ImportPath}}"
 	gocrudv1 "github.com/FlorinBalint/gocrud/proto/v1"
 	"github.com/FlorinBalint/gocrud/sqldialect"
@@ -49,68 +69,64 @@ func (h *{{.EntityName}}CreateHandler) Create(ctx context.Context, req *{{.Impor
 		{{.SQLValueExpr}},
 {{- end}}
 	}
-{{if .AutoGenFields}}
-	// RETURNING for auto-generated columns.
 	var returningCols []string
+{{- if .AutoGenFields}}
 	if h.dialect.SupportsReturning() {
 		returningCols = []string{ {{- range $i, $f := .AutoGenFields}}{{if $i}}, {{end}}"{{$f.ColName}}"{{end -}} }
 	}
-{{else}}
-	var returningCols []string
-{{end}}
+{{- end}}
 	q := sqldialect.NewInsertQuery("{{.Table}}", columns, values, returningCols)
 	sqlStr, args, err := h.dialect.BuildInsert(q)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "building insert SQL: %v", err)
 	}
-{{if .AutoGenFields}}
-	if h.dialect.SupportsReturning() {
-		rows, err := h.db.QueryContext(ctx, sqlStr, args...)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "executing insert query: %v", err)
-		}
-		defer rows.Close()
-
-		if !rows.Next() {
-			if err := rows.Err(); err != nil {
-				return nil, status.Errorf(codes.Internal, "reading returning rows: %v", err)
+{{- if .AutoGenFields}}
+{{- range $i, $f := .AutoGenFields}}
+	var autoGen{{$i}} {{$f.ScanType}}
+{{- end}}
+	err = execInsertAndScan(ctx, h.db, h.dialect.SupportsReturning(),
+		sqlStr, args,
+		func(lastInsertId int64) (string, []any, error) {
+{{- if .AutoGenPK}}
+			if lastInsertId > 0 {
+				entity.{{.AutoGenPK.GoName}} = {{castFromInt64 .AutoGenPK.GoType "lastInsertId"}}
 			}
+{{- end}}
+{{- if .AutoGenFields}}
+			selectCols := []string{ {{- range $i, $f := .AutoGenFields}}{{if $i}}, {{end}}"{{$f.ColName}}"{{end -}} }
+			filter := h.primaryKeyFilter(entity)
+			selQ := sqldialect.NewSelectQuery("{{.Table}}", selectCols, filter, nil, 1, 0, false)
+			return h.dialect.BuildSelect(selQ)
+{{- else}}
+			return "", nil, nil
+{{- end}}
+		},
+		func(row RowScanner) error {
+			return row.Scan({{range $i, $f := .AutoGenFields}}{{if $i}}, {{end}}&autoGen{{$i}}{{end}})
+		},
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
 			return nil, status.Errorf(codes.Internal, "insert did not return any rows")
 		}
-
-		// Scan auto-generated columns.
-{{- range $i, $f := .AutoGenFields}}
-		var autoGen{{$i}} {{$f.ScanType}}
-{{- end}}
-		if err := rows.Scan({{range $i, $f := .AutoGenFields}}{{if $i}}, {{end}}&autoGen{{$i}}{{end}}); err != nil {
-			return nil, status.Errorf(codes.Internal, "scanning returning values: %v", err)
-		}
-
-		// Set auto-generated values on the entity.
-{{- range $i, $f := .AutoGenFields}}
-		{{setFromScanVar $f.GoType $f.GoName $i}}
-{{- end}}
-	} else {
-		res, err := h.db.ExecContext(ctx, sqlStr, args...)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "executing insert: %v", err)
-		}
-{{- if .AutoGenPK}}
-
-		// Without RETURNING, recover auto-generated PK via LastInsertId.
-		if id, err := res.LastInsertId(); err == nil && id > 0 {
-			entity.{{.AutoGenPK.GoName}} = {{castFromInt64 .AutoGenPK.GoType "id"}}
-		}
-{{- else}}
-		_ = res
-{{- end}}
+		return nil, status.Errorf(codes.Internal, "executing insert/select: %v", err)
 	}
+	// Set auto-generated values on the entity.
+{{- range $i, $f := .AutoGenFields}}
+		{{setFromScanVar $f.GoType $f.GoName $i "autoGen"}}
+{{- end}}
 {{- else}}
 	_, err = h.db.ExecContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "executing insert: %v", err)
 	}
 {{- end}}
-
 	return entity, nil
 }
+{{- if .NonPKAutoGenFields}}
+
+// primaryKeyFilter builds a WHERE filter matching all primary key fields.
+func (h *{{.EntityName}}CreateHandler) primaryKeyFilter(entity *{{.EntityGoType}}) *gocrudv1.Filter {
+	return {{pkFilter .AllKeys}}
+}
+{{- end}}

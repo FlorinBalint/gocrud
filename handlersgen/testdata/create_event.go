@@ -4,7 +4,6 @@ package handlers
 
 import (
 	"context"
-
 	testdata "github.com/FlorinBalint/gocrud/entitygen/testdata"
 	gocrudv1 "github.com/FlorinBalint/gocrud/proto/v1"
 	"github.com/FlorinBalint/gocrud/sqldialect"
@@ -54,19 +53,15 @@ func (h *EventCreateHandler) Create(ctx context.Context, req *testdata.CreateEve
 		decimalValue(entity.GetPrice()),
 		timeOfDayValue(entity.GetAlarmTime()),
 	}
-
 	var returningCols []string
-
 	q := sqldialect.NewInsertQuery("event", columns, values, returningCols)
 	sqlStr, args, err := h.dialect.BuildInsert(q)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "building insert SQL: %v", err)
 	}
-
 	_, err = h.db.ExecContext(ctx, sqlStr, args...)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "executing insert: %v", err)
 	}
-
 	return entity, nil
 }

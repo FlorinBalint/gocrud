@@ -65,6 +65,10 @@ func TestGenerateHandlers_RealProto(t *testing.T) {
 			"create_product.go":  "create_product.go",
 			"update_product.go":  "update_product.go",
 		}},
+		{"AuditLog", map[string]string{
+			"types.go":            "types.go",
+			"create_auditlog.go":  "create_auditlog.go",
+		}},
 	}
 
 	for _, tt := range tests {
@@ -83,6 +87,13 @@ func TestGenerateHandlers_RealProto(t *testing.T) {
 				t.Fatal("expected non-empty handler output")
 			}
 
+			for i := 0; i < desc.Fields().Len(); i++ {
+				f := desc.Fields().Get(i)
+				if f.Message() != nil {
+					t.Logf("Field %s has FullName: %s", f.Name(), f.Message().FullName())
+				}
+			}
+
 			// Check each generated file against its golden.
 			for _, f := range files {
 				goldenName, ok := tt.goldens[f.Filename]
@@ -94,7 +105,11 @@ func TestGenerateHandlers_RealProto(t *testing.T) {
 				want := readGolden(t, goldenName)
 				if diff := cmp.Diff(want, f.Content); diff != "" {
 					if os.Getenv("UPDATE_GOLDEN") == "1" {
-						os.WriteFile(filepath.Join("testdata", goldenName), []byte(f.Content), 0644)
+						dir := "testdata"
+						if wd := os.Getenv("BUILD_WORKSPACE_DIRECTORY"); wd != "" {
+							dir = filepath.Join(wd, "handlersgen", "testdata")
+						}
+						os.WriteFile(filepath.Join(dir, goldenName), []byte(f.Content), 0644)
 						t.Logf("updated golden file: %s", goldenName)
 					} else {
 						t.Errorf("output mismatch for %s (-want +got):\n%s", f.Filename, diff)

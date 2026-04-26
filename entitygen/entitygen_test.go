@@ -257,6 +257,8 @@ func TestGenerateServiceProto_RealProto(t *testing.T) {
 		{"ListUpsertDeleteWithEtagUser", "list_upsert_delete_with_etag_service.proto"},
 		{"OptionsOverrideUser", "options_override_service.proto"},
 		{"AutogenUser", "autogen_user_service.proto"},
+		{"Event", "event_service.proto"},
+		{"Product", "product_service.proto"},
 	}
 
 	for _, tt := range tests {

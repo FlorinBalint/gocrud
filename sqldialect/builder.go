@@ -88,23 +88,26 @@ type UpdateQuery interface {
 	Table() string
 	Updates() []*gocrudv1.ColumnUpdate // the SET clause; must be non-empty
 	Filter() *gocrudv1.Filter          // nil → no WHERE clause (updates all rows)
+	Returning() []string               // columns to return, if backend supports it
 }
 
 // updateQuery is the concrete implementation of UpdateQuery.
 type updateQuery struct {
-	table   string
-	updates []*gocrudv1.ColumnUpdate
-	filter  *gocrudv1.Filter
+	table     string
+	updates   []*gocrudv1.ColumnUpdate
+	filter    *gocrudv1.Filter
+	returning []string
 }
 
 func (q *updateQuery) Table() string                     { return q.table }
 func (q *updateQuery) Updates() []*gocrudv1.ColumnUpdate { return q.updates }
 func (q *updateQuery) Filter() *gocrudv1.Filter          { return q.filter }
+func (q *updateQuery) Returning() []string               { return q.returning }
 
 // NewUpdateQuery constructs an UpdateQuery. Pass nil for filter to omit the
 // WHERE clause. Use ColumnUpdate.use_default to apply SQL DEFAULT to a column.
-func NewUpdateQuery(table string, updates []*gocrudv1.ColumnUpdate, filter *gocrudv1.Filter) UpdateQuery {
-	return &updateQuery{table: table, updates: updates, filter: filter}
+func NewUpdateQuery(table string, updates []*gocrudv1.ColumnUpdate, filter *gocrudv1.Filter, returning []string) UpdateQuery {
+	return &updateQuery{table: table, updates: updates, filter: filter, returning: returning}
 }
 
 // UpsertQuery is the fully-resolved internal representation of an
@@ -161,21 +164,24 @@ func NewUpsertQuery(
 type DeleteQuery interface {
 	Table() string
 	Filter() *gocrudv1.Filter // must be non-nil
+	Returning() []string      // columns to return, if backend supports it
 }
 
 // deleteQuery is the concrete implementation of DeleteQuery.
 type deleteQuery struct {
-	table  string
-	filter *gocrudv1.Filter
+	table     string
+	filter    *gocrudv1.Filter
+	returning []string
 }
 
 func (q *deleteQuery) Table() string            { return q.table }
 func (q *deleteQuery) Filter() *gocrudv1.Filter { return q.filter }
+func (q *deleteQuery) Returning() []string      { return q.returning }
 
 // NewDeleteQuery constructs a DeleteQuery. filter must be non-nil; BuildDelete
 // will return an error if it is nil or produces an empty WHERE clause.
-func NewDeleteQuery(table string, filter *gocrudv1.Filter) DeleteQuery {
-	return &deleteQuery{table: table, filter: filter}
+func NewDeleteQuery(table string, filter *gocrudv1.Filter, returning []string) DeleteQuery {
+	return &deleteQuery{table: table, filter: filter, returning: returning}
 }
 
 // selectQuery is the concrete implementation of SelectQuery.

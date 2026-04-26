@@ -27,6 +27,21 @@ import "google/protobuf/field_mask.proto";
 {{- if .HasMethod "DELETE"}}
 import "google/protobuf/empty.proto";
 {{- end}}
+{{- if .HasProvidedKeyType "google.protobuf.Timestamp"}}
+import "google/protobuf/timestamp.proto";
+{{- end}}
+{{- if .HasProvidedKeyType "google.type.Date"}}
+import "google/type/date.proto";
+{{- end}}
+{{- if .HasProvidedKeyType "google.protobuf.Duration"}}
+import "google/protobuf/duration.proto";
+{{- end}}
+{{- if .HasProvidedKeyType "google.type.Decimal"}}
+import "google/type/decimal.proto";
+{{- end}}
+{{- if .HasProvidedKeyType "google.type.TimeOfDay"}}
+import "google/type/timeofday.proto";
+{{- end}}
 
 option go_package = "{{.GoPackage}}";
 {{if .HasMethod "LIST"}}

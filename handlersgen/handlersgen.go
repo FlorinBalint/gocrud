@@ -21,6 +21,7 @@ package handlersgen
 import (
 	"bytes"
 	"fmt"
+	"go/format"
 	"sort"
 	"strings"
 	"unicode"
@@ -87,12 +88,31 @@ type handlerData struct {
 	AutoGenPK *fieldInfo
 	// AutoGenFields lists all auto-generated fields (PKs and non-PKs).
 	AutoGenFields []fieldInfo
+	// NonPKAutoGenFields lists auto-generated fields that are NOT primary keys.
+	NonPKAutoGenFields []fieldInfo
 	// InsertFields lists fields included in the INSERT (all except auto-generated).
 	InsertFields []fieldInfo
 	// AllKeys are all PK fields (provided + auto-generated), sorted by PKOrder.
 	AllKeys []fieldInfo
 	// UpdateFields are non-PK fields that can be updated.
 	UpdateFields []fieldInfo
+	// AllNonPKFields are all non-PK fields in proto order (UpdateFields ∪ NonPKAutoGenFields).
+	// Used by the update handler to read back the full entity after UPDATE.
+	AllNonPKFields []fieldInfo
+
+	// Imports flags for WKTs used in create (autogen fields only).
+	HasTimestamp bool
+	HasDate      bool
+	HasDuration  bool
+	HasDecimal   bool
+	HasTimeOfDay bool
+
+	// UpdateImport flags for WKTs needed in the update template (all non-PK fields).
+	UpdateHasTimestamp bool
+	UpdateHasDate      bool
+	UpdateHasDuration  bool
+	UpdateHasDecimal   bool
+	UpdateHasTimeOfDay bool
 
 	// Methods lists the CRUD methods to generate handlers for.
 	Methods []entity.Method
@@ -204,7 +224,7 @@ func GenerateHandlers(desc protoreflect.MessageDescriptor, entityImportPath stri
 	}
 
 	// Partition fields.
-	var providedKeys, autoGenFields, insertFields []fieldInfo
+	var providedKeys, autoGenFields, nonPKAutoGenFields, insertFields []fieldInfo
 	var autoGenPK *fieldInfo
 	for i := range allFields {
 		f := &allFields[i]
@@ -216,6 +236,8 @@ func GenerateHandlers(desc protoreflect.MessageDescriptor, entityImportPath stri
 				}
 				cp := *f
 				autoGenPK = &cp
+			} else {
+				nonPKAutoGenFields = append(nonPKAutoGenFields, *f)
 			}
 		}
 		if f.IsPK && !f.IsAutoGen {
@@ -240,20 +262,60 @@ func GenerateHandlers(desc protoreflect.MessageDescriptor, entityImportPath stri
 	sort.SliceStable(allKeys, func(i, j int) bool { return allKeys[i].PKOrder < allKeys[j].PKOrder })
 
 	data := handlerData{
-		EntityName:    name,
-		EntityGoType:  importAlias + "." + name,
-		Package:       "handlers",
-		ImportPath:    importPath,
-		ImportAlias:   importAlias,
-		Table:         table,
-		AllFields:     allFields,
-		ProvidedKeys:  providedKeys,
-		AutoGenPK:     autoGenPK,
-		AutoGenFields: autoGenFields,
-		InsertFields:  insertFields,
-		AllKeys:       allKeys,
-		UpdateFields:  updateFields,
-		Methods:       methods,
+		EntityName:         name,
+		EntityGoType:       importAlias + "." + name,
+		Package:            "handlers",
+		ImportPath:         importPath,
+		ImportAlias:        importAlias,
+		Table:              table,
+		AllFields:          allFields,
+		ProvidedKeys:       providedKeys,
+		AutoGenPK:          autoGenPK,
+		AutoGenFields:      autoGenFields,
+		NonPKAutoGenFields: nonPKAutoGenFields,
+		InsertFields:       insertFields,
+		AllKeys:            allKeys,
+		UpdateFields:       updateFields,
+		Methods:            methods,
+	}
+
+	// allNonPKFields preserves proto declaration order (allFields minus PKs).
+	var allNonPKFields []fieldInfo
+	for _, f := range allFields {
+		if !f.IsPK {
+			allNonPKFields = append(allNonPKFields, f)
+		}
+	}
+	data.AllNonPKFields = allNonPKFields
+
+	// Has* flags: create uses autogen scan types; update uses all non-PK field types.
+	for _, f := range nonPKAutoGenFields {
+		switch f.GoType {
+		case "timestamp":
+			data.HasTimestamp = true
+		case "date":
+			data.HasDate = true
+		case "duration":
+			data.HasDuration = true
+		case "decimal":
+			data.HasDecimal = true
+		case "timeofday":
+			data.HasTimeOfDay = true
+		}
+	}
+	for _, f := range allNonPKFields {
+		switch f.GoType {
+		case "timestamp":
+			data.UpdateHasTimestamp = true
+		case "date":
+			data.UpdateHasDate = true
+		case "duration":
+			data.UpdateHasDuration = true
+		case "decimal":
+			data.UpdateHasDecimal = true
+		case "timeofday":
+			data.UpdateHasTimeOfDay = true
+		}
 	}
 
 	var files []GeneratedFile
@@ -263,7 +325,11 @@ func GenerateHandlers(desc protoreflect.MessageDescriptor, entityImportPath stri
 	if err := typesTmpl.Execute(&buf, data); err != nil {
 		return nil, fmt.Errorf("handlersgen: executing types template: %w", err)
 	}
-	files = append(files, GeneratedFile{Filename: "types.go", Content: buf.String()})
+	formatted, err := format.Source(buf.Bytes())
+	if err != nil {
+		return nil, fmt.Errorf("handlersgen: formatting types template output: %w\n%s", err, buf.String())
+	}
+	files = append(files, GeneratedFile{Filename: "types.go", Content: string(formatted)})
 
 	entityLower := strings.ToLower(name)
 
@@ -273,9 +339,13 @@ func GenerateHandlers(desc protoreflect.MessageDescriptor, entityImportPath stri
 		if err := createTmpl.Execute(&buf, data); err != nil {
 			return nil, fmt.Errorf("handlersgen: executing create template: %w", err)
 		}
+		formatted, err := format.Source(buf.Bytes())
+		if err != nil {
+			return nil, fmt.Errorf("handlersgen: formatting create template output: %w\n%s", err, buf.String())
+		}
 		files = append(files, GeneratedFile{
 			Filename: "create_" + entityLower + ".go",
-			Content:  buf.String(),
+			Content:  string(formatted),
 		})
 	}
 
@@ -284,9 +354,13 @@ func GenerateHandlers(desc protoreflect.MessageDescriptor, entityImportPath stri
 		if err := updateTmpl.Execute(&buf, data); err != nil {
 			return nil, fmt.Errorf("handlersgen: executing update template: %w", err)
 		}
+		formatted, err := format.Source(buf.Bytes())
+		if err != nil {
+			return nil, fmt.Errorf("handlersgen: formatting update template output: %w\n%s", err, buf.String())
+		}
 		files = append(files, GeneratedFile{
 			Filename: "update_" + entityLower + ".go",
-			Content:  buf.String(),
+			Content:  string(formatted),
 		})
 	}
 
@@ -397,8 +471,17 @@ func protoKindToScanType(f protoreflect.FieldDescriptor) string {
 	case protoreflect.BytesKind:
 		return "[]byte"
 	case protoreflect.MessageKind:
-		// Message-type fields are not expected as auto-generated scan targets.
-		return "any"
+		switch f.Message().FullName() {
+		case "google.protobuf.Timestamp", "google.type.Date", "google.type.TimeOfDay":
+			return "time.Time"
+		case "google.protobuf.Duration":
+			return "int64"
+		case "google.type.Decimal":
+			return "string"
+		default:
+			// Message-type fields are generally not expected as auto-generated scan targets.
+			return "any"
+		}
 	default:
 		return "any"
 	}

@@ -4,12 +4,15 @@ package handlers
 
 import (
 	"context"
-
+	"database/sql"
 	testdata "github.com/FlorinBalint/gocrud/entitygen/testdata"
 	gocrudv1 "github.com/FlorinBalint/gocrud/proto/v1"
 	"github.com/FlorinBalint/gocrud/sqldialect"
+	"google.golang.org/genproto/googleapis/type/decimal"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
+	"time"
 )
 
 // ProductUpdateHandler handles Update requests for Product entities.
@@ -48,20 +51,75 @@ func (h *ProductUpdateHandler) Update(ctx context.Context, req *testdata.UpdateP
 		return entity, nil
 	}
 
-	filter := h.primaryKeyFilter(entity)
-
-	q := sqldialect.NewUpdateQuery("product", updates, filter)
-	sqlStr, args, err := h.dialect.BuildUpdate(q)
+	sqlStr, args, err := h.buildUpdateSQL(entity, updates)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "building update SQL: %v", err)
+		return nil, err
 	}
 
-	_, err = h.db.ExecContext(ctx, sqlStr, args...)
+	var selSql string
+	var selArgs []any
+	if !h.dialect.SupportsReturning() {
+		selSql, selArgs, err = h.buildSelectSQL(entity)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var scan0 string
+	var scan1 string
+	var scan2 string
+	var scan3 int64
+	var scan4 bool
+	var scan5 time.Time
+	err = execAndScan(ctx, h.db, h.dialect.SupportsReturning(),
+		sqlStr, args,
+		selSql, selArgs,
+		func(row RowScanner) error {
+			return row.Scan(&scan0, &scan1, &scan2, &scan3, &scan4, &scan5)
+		},
+	)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, status.Errorf(codes.NotFound, "entity not found after update")
+		}
 		return nil, status.Errorf(codes.Internal, "executing update: %v", err)
 	}
 
+	entity.Name = scan0
+	entity.Description = scan1
+	entity.Price = &decimal.Decimal{Value: scan2}
+	entity.Quantity = int32(scan3)
+	entity.Available = scan4
+	entity.UpdatedAt = timestamppb.New(scan5)
 	return entity, nil
+}
+
+// buildUpdateSQL builds the UPDATE query, including RETURNING for all non-PK fields
+// when the dialect supports it.
+func (h *ProductUpdateHandler) buildUpdateSQL(entity *testdata.Product, updates []*gocrudv1.ColumnUpdate) (string, []any, error) {
+	filter := h.primaryKeyFilter(entity)
+	var returningCols []string
+	if h.dialect.SupportsReturning() {
+		returningCols = []string{"name", "description", "price", "quantity", "available", "updated_at"}
+	}
+	q := sqldialect.NewUpdateQuery("product", updates, filter, returningCols)
+	sqlStr, args, err := h.dialect.BuildUpdate(q)
+	if err != nil {
+		return "", nil, status.Errorf(codes.Internal, "building update SQL: %v", err)
+	}
+	return sqlStr, args, nil
+}
+
+// buildSelectSQL builds a SELECT query to re-read all non-PK fields after a non-RETURNING update.
+func (h *ProductUpdateHandler) buildSelectSQL(entity *testdata.Product) (string, []any, error) {
+	filter := h.primaryKeyFilter(entity)
+	selectCols := []string{"name", "description", "price", "quantity", "available", "updated_at"}
+	selQ := sqldialect.NewSelectQuery("product", selectCols, filter, nil, 1, 0, false)
+	sqlStr, args, err := h.dialect.BuildSelect(selQ)
+	if err != nil {
+		return "", nil, status.Errorf(codes.Internal, "building select SQL: %v", err)
+	}
+	return sqlStr, args, nil
 }
 
 // validateKeys checks that all primary key fields are populated on the entity.
@@ -96,12 +154,12 @@ func (h *ProductUpdateHandler) validateMask(paths []string) ([]string, error) {
 	}
 
 	allowedFields := map[string]bool{
-		"name": true,
+		"name":        true,
 		"description": true,
-		"price": true,
-		"quantity": true,
-		"available": true,
-		"updated_at": true,
+		"price":       true,
+		"quantity":    true,
+		"available":   true,
+		"updated_at":  true,
 	}
 	for _, p := range paths {
 		if !allowedFields[p] {
@@ -180,9 +238,9 @@ func (h *ProductUpdateHandler) primaryKeyFilter(entity *testdata.Product) *gocru
 	return &gocrudv1.Filter{
 		Filter: &gocrudv1.Filter_Condition{
 			Condition: &gocrudv1.Condition{
-				Column: "id",
-				Op:     gocrudv1.Operator_EQUAL,
-				Value:  stringValue(entity.GetId()),
+				Column:  "id",
+				Op:      gocrudv1.Operator_EQUAL,
+				Operand: &gocrudv1.Condition_Value{Value: stringValue(entity.GetId())},
 			},
 		},
 	}

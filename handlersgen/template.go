@@ -16,8 +16,8 @@ var createTemplateContent string
 //go:embed templates/update.go.tmpl
 var updateTemplateContent string
 
-func setFromScanVarfunc(goType, goName string, idx int) string {
-		varName := fmt.Sprintf("autoGen%d", idx)
+func setFromScanVarfunc(goType, goName string, idx int, prefix string) string {
+		varName := fmt.Sprintf("%s%d", prefix, idx)
 		switch goType {
 		case "string", "int64":
 			return "entity." + goName + " = " + varName
@@ -27,6 +27,16 @@ func setFromScanVarfunc(goType, goName string, idx int) string {
 			return "entity." + goName + " = uint32(" + varName + ")"
 		case "uint64":
 			return "entity." + goName + " = uint64(" + varName + ")"
+		case "timestamp":
+			return "entity." + goName + " = timestamppb.New(" + varName + ")"
+		case "date":
+			return "entity." + goName + " = &date.Date{Year: int32(" + varName + ".Year()), Month: int32(" + varName + ".Month()), Day: int32(" + varName + ".Day())}"
+		case "duration":
+			return "entity." + goName + " = durationpb.New(time.Duration(" + varName + "))"
+		case "decimal":
+			return "entity." + goName + " = &decimal.Decimal{Value: " + varName + "}"
+		case "timeofday":
+			return "entity." + goName + " = &timeofday.TimeOfDay{Hours: int32(" + varName + ".Hour()), Minutes: int32(" + varName + ".Minute()), Seconds: int32(" + varName + ".Second()), Nanos: int32(" + varName + ".Nanosecond())}"
 		default:
 			return "entity." + goName + " = " + varName
 		}
@@ -69,7 +79,7 @@ func pkCondition(k fieldInfo, indent string) string {
 	return fmt.Sprintf("&gocrudv1.Condition{\n"+
 		"%s\tColumn: %q,\n"+
 		"%s\tOp:     gocrudv1.Operator_EQUAL,\n"+
-		"%s\tValue:  %s,\n"+
+		"%s\tOperand: &gocrudv1.Condition_Value{Value: %s},\n"+
 		"%s}", indent, k.ColName, indent, indent, val, indent)
 }
 

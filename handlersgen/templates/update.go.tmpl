@@ -4,7 +4,25 @@ package {{.Package}}
 
 import (
 	"context"
-
+	"database/sql"
+{{- if or .UpdateHasTimestamp .UpdateHasDate .UpdateHasTimeOfDay .UpdateHasDuration}}
+	"time"
+{{- end}}
+{{- if .UpdateHasDate}}
+	"google.golang.org/genproto/googleapis/type/date"
+{{- end}}
+{{- if .UpdateHasDecimal}}
+	"google.golang.org/genproto/googleapis/type/decimal"
+{{- end}}
+{{- if .UpdateHasTimeOfDay}}
+	"google.golang.org/genproto/googleapis/type/timeofday"
+{{- end}}
+{{- if .UpdateHasDuration}}
+	"google.golang.org/protobuf/types/known/durationpb"
+{{- end}}
+{{- if .UpdateHasTimestamp}}
+	"google.golang.org/protobuf/types/known/timestamppb"
+{{- end}}
 	{{.ImportAlias}} "{{.ImportPath}}"
 	gocrudv1 "github.com/FlorinBalint/gocrud/proto/v1"
 	"github.com/FlorinBalint/gocrud/sqldialect"
@@ -48,20 +66,67 @@ func (h *{{.EntityName}}UpdateHandler) Update(ctx context.Context, req *{{.Impor
 		return entity, nil
 	}
 
-	filter := h.primaryKeyFilter(entity)
-
-	q := sqldialect.NewUpdateQuery("{{.Table}}", updates, filter)
-	sqlStr, args, err := h.dialect.BuildUpdate(q)
+	sqlStr, args, err := h.buildUpdateSQL(entity, updates)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "building update SQL: %v", err)
+		return nil, err
 	}
 
-	_, err = h.db.ExecContext(ctx, sqlStr, args...)
+	var selSql string
+	var selArgs []any
+	if !h.dialect.SupportsReturning() {
+		selSql, selArgs, err = h.buildSelectSQL(entity)
+		if err != nil {
+			return nil, err
+		}
+	}
+{{range $i, $f := .AllNonPKFields}}
+	var scan{{$i}} {{$f.ScanType}}
+{{- end}}
+	err = execAndScan(ctx, h.db, h.dialect.SupportsReturning(),
+		sqlStr, args,
+		selSql, selArgs,
+		func(row RowScanner) error {
+			return row.Scan({{range $i, $f := .AllNonPKFields}}{{if $i}}, {{end}}&scan{{$i}}{{end}})
+		},
+	)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, status.Errorf(codes.NotFound, "entity not found after update")
+		}
 		return nil, status.Errorf(codes.Internal, "executing update: %v", err)
 	}
-
+{{range $i, $f := .AllNonPKFields}}
+	{{setFromScanVar $f.GoType $f.GoName $i "scan"}}
+{{- end}}
 	return entity, nil
+}
+
+// buildUpdateSQL builds the UPDATE query, including RETURNING for all non-PK fields
+// when the dialect supports it.
+func (h *{{.EntityName}}UpdateHandler) buildUpdateSQL(entity *{{.EntityGoType}}, updates []*gocrudv1.ColumnUpdate) (string, []any, error) {
+	filter := h.primaryKeyFilter(entity)
+	var returningCols []string
+	if h.dialect.SupportsReturning() {
+		returningCols = []string{ {{- range $i, $f := .AllNonPKFields}}{{if $i}}, {{end}}"{{$f.ColName}}"{{end -}} }
+	}
+	q := sqldialect.NewUpdateQuery("{{.Table}}", updates, filter, returningCols)
+	sqlStr, args, err := h.dialect.BuildUpdate(q)
+	if err != nil {
+		return "", nil, status.Errorf(codes.Internal, "building update SQL: %v", err)
+	}
+	return sqlStr, args, nil
+}
+
+// buildSelectSQL builds a SELECT query to re-read all non-PK fields after a non-RETURNING update.
+func (h *{{.EntityName}}UpdateHandler) buildSelectSQL(entity *{{.EntityGoType}}) (string, []any, error) {
+	filter := h.primaryKeyFilter(entity)
+	selectCols := []string{ {{- range $i, $f := .AllNonPKFields}}{{if $i}}, {{end}}"{{$f.ColName}}"{{end -}} }
+	selQ := sqldialect.NewSelectQuery("{{.Table}}", selectCols, filter, nil, 1, 0, false)
+	sqlStr, args, err := h.dialect.BuildSelect(selQ)
+	if err != nil {
+		return "", nil, status.Errorf(codes.Internal, "building select SQL: %v", err)
+	}
+	return sqlStr, args, nil
 }
 
 // validateKeys checks that all primary key fields are populated on the entity.

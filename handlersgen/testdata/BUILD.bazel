@@ -1,5 +1,26 @@
+load("@rules_go//go:def.bzl", "go_library")
+
 filegroup(
     name = "test_files",
     srcs = glob(["*.go"]),
     visibility = ["//visibility:public"],
+)
+
+go_library(
+    name = "testdata",
+    srcs = glob(["*.go"]),
+    importpath = "github.com/FlorinBalint/gocrud/handlersgen/testdata",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//entitygen/testdata:testdata_go_proto",
+        "//proto/v1:query_go_proto",
+        "//sqldialect",
+        "@org_golang_google_grpc//codes",
+        "@org_golang_google_grpc//status",
+        "@org_golang_google_genproto//googleapis/type/date",
+        "@org_golang_google_genproto//googleapis/type/decimal",
+        "@org_golang_google_genproto//googleapis/type/timeofday",
+        "@org_golang_google_protobuf//types/known/durationpb",
+        "@org_golang_google_protobuf//types/known/timestamppb",
+    ],
 )

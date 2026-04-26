@@ -4,7 +4,7 @@ package handlers
 
 import (
 	"context"
-
+	"database/sql"
 	testdata "github.com/FlorinBalint/gocrud/entitygen/testdata"
 	gocrudv1 "github.com/FlorinBalint/gocrud/proto/v1"
 	"github.com/FlorinBalint/gocrud/sqldialect"
@@ -48,20 +48,65 @@ func (h *RealUserUpdateHandler) Update(ctx context.Context, req *testdata.Update
 		return entity, nil
 	}
 
-	filter := h.primaryKeyFilter(entity)
-
-	q := sqldialect.NewUpdateQuery("real_user", updates, filter)
-	sqlStr, args, err := h.dialect.BuildUpdate(q)
+	sqlStr, args, err := h.buildUpdateSQL(entity, updates)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "building update SQL: %v", err)
+		return nil, err
 	}
 
-	_, err = h.db.ExecContext(ctx, sqlStr, args...)
+	var selSql string
+	var selArgs []any
+	if !h.dialect.SupportsReturning() {
+		selSql, selArgs, err = h.buildSelectSQL(entity)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var scan0 string
+	err = execAndScan(ctx, h.db, h.dialect.SupportsReturning(),
+		sqlStr, args,
+		selSql, selArgs,
+		func(row RowScanner) error {
+			return row.Scan(&scan0)
+		},
+	)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, status.Errorf(codes.NotFound, "entity not found after update")
+		}
 		return nil, status.Errorf(codes.Internal, "executing update: %v", err)
 	}
 
+	entity.Email = scan0
 	return entity, nil
+}
+
+// buildUpdateSQL builds the UPDATE query, including RETURNING for all non-PK fields
+// when the dialect supports it.
+func (h *RealUserUpdateHandler) buildUpdateSQL(entity *testdata.RealUser, updates []*gocrudv1.ColumnUpdate) (string, []any, error) {
+	filter := h.primaryKeyFilter(entity)
+	var returningCols []string
+	if h.dialect.SupportsReturning() {
+		returningCols = []string{"email"}
+	}
+	q := sqldialect.NewUpdateQuery("real_user", updates, filter, returningCols)
+	sqlStr, args, err := h.dialect.BuildUpdate(q)
+	if err != nil {
+		return "", nil, status.Errorf(codes.Internal, "building update SQL: %v", err)
+	}
+	return sqlStr, args, nil
+}
+
+// buildSelectSQL builds a SELECT query to re-read all non-PK fields after a non-RETURNING update.
+func (h *RealUserUpdateHandler) buildSelectSQL(entity *testdata.RealUser) (string, []any, error) {
+	filter := h.primaryKeyFilter(entity)
+	selectCols := []string{"email"}
+	selQ := sqldialect.NewSelectQuery("real_user", selectCols, filter, nil, 1, 0, false)
+	sqlStr, args, err := h.dialect.BuildSelect(selQ)
+	if err != nil {
+		return "", nil, status.Errorf(codes.Internal, "building select SQL: %v", err)
+	}
+	return sqlStr, args, nil
 }
 
 // validateKeys checks that all primary key fields are populated on the entity.
@@ -135,9 +180,9 @@ func (h *RealUserUpdateHandler) primaryKeyFilter(entity *testdata.RealUser) *goc
 	return &gocrudv1.Filter{
 		Filter: &gocrudv1.Filter_Condition{
 			Condition: &gocrudv1.Condition{
-				Column: "id",
-				Op:     gocrudv1.Operator_EQUAL,
-				Value:  stringValue(entity.GetId()),
+				Column:  "id",
+				Op:      gocrudv1.Operator_EQUAL,
+				Operand: &gocrudv1.Condition_Value{Value: stringValue(entity.GetId())},
 			},
 		},
 	}

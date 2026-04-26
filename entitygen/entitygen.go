@@ -61,6 +61,16 @@ func (d templateData) ResourcePath() string {
 	return d.ResPath
 }
 
+// HasProvidedKeyType returns true if any ProvidedKey has the given type.
+func (d templateData) HasProvidedKeyType(t string) bool {
+	for _, k := range d.ProvidedKeys {
+		if k.Type == t {
+			return true
+		}
+	}
+	return false
+}
+
 // deriveBasePath strips the last /{...} segment from a resource path
 // to obtain the collection path. For example:
 //
@@ -166,9 +176,14 @@ func GenerateServiceProto(desc protoreflect.MessageDescriptor) (string, error) {
 			if !ok || order <= 0 {
 				continue
 			}
+			fieldType := f.Kind().String()
+			if f.Kind() == protoreflect.MessageKind {
+				fieldType = string(f.Message().FullName())
+			}
+
 			kf := KeyField{
 				Name:  string(f.Name()),
-				Type:  f.Kind().String(),
+				Type:  fieldType,
 				Order: order,
 			}
 			allKeyFields = append(allKeyFields, kf)

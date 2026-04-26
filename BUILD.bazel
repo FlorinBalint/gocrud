@@ -13,17 +13,3 @@ gazelle(
     ],
     command = "update-repos",
 )
-
-go_library(
-    name = "gocrud_lib",
-    srcs = ["scratch.go"],
-    importpath = "github.com/FlorinBalint/gocrud",
-    visibility = ["//visibility:private"],
-    deps = ["//proto/entity:options_go_proto"],
-)
-
-go_binary(
-    name = "gocrud",
-    embed = [":gocrud_lib"],
-    visibility = ["//visibility:public"],
-)

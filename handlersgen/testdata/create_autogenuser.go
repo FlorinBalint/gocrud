@@ -4,12 +4,15 @@ package handlers
 
 import (
 	"context"
-
+	"database/sql"
 	testdata "github.com/FlorinBalint/gocrud/entitygen/testdata"
 	gocrudv1 "github.com/FlorinBalint/gocrud/proto/v1"
 	"github.com/FlorinBalint/gocrud/sqldialect"
+	"google.golang.org/genproto/googleapis/type/date"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/timestamppb"
+	"time"
 )
 
 // AutogenUserCreateHandler handles Create requests for AutogenUser entities.
@@ -51,52 +54,82 @@ func (h *AutogenUserCreateHandler) Create(ctx context.Context, req *testdata.Cre
 		intValue(entity.GetId_2()),
 		stringValue(entity.GetEmail()),
 	}
-
-	// RETURNING for auto-generated columns.
 	var returningCols []string
 	if h.dialect.SupportsReturning() {
-		returningCols = []string{"id_3"}
+		returningCols = []string{"id_3", "commit_timestamp", "date_of_birth"}
 	}
-
 	q := sqldialect.NewInsertQuery("composite_entities", columns, values, returningCols)
 	sqlStr, args, err := h.dialect.BuildInsert(q)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "building insert SQL: %v", err)
 	}
-
-	if h.dialect.SupportsReturning() {
-		rows, err := h.db.QueryContext(ctx, sqlStr, args...)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "executing insert query: %v", err)
-		}
-		defer rows.Close()
-
-		if !rows.Next() {
-			if err := rows.Err(); err != nil {
-				return nil, status.Errorf(codes.Internal, "reading returning rows: %v", err)
+	var autoGen0 int64
+	var autoGen1 time.Time
+	var autoGen2 time.Time
+	err = execInsertAndScan(ctx, h.db, h.dialect.SupportsReturning(),
+		sqlStr, args,
+		func(lastInsertId int64) (string, []any, error) {
+			if lastInsertId > 0 {
+				entity.Id_3 = lastInsertId
 			}
+			selectCols := []string{"id_3", "commit_timestamp", "date_of_birth"}
+			filter := h.primaryKeyFilter(entity)
+			selQ := sqldialect.NewSelectQuery("composite_entities", selectCols, filter, nil, 1, 0, false)
+			return h.dialect.BuildSelect(selQ)
+		},
+		func(row RowScanner) error {
+			return row.Scan(&autoGen0, &autoGen1, &autoGen2)
+		},
+	)
+	if err != nil {
+		if err == sql.ErrNoRows {
 			return nil, status.Errorf(codes.Internal, "insert did not return any rows")
 		}
-
-		// Scan auto-generated columns.
-		var autoGen0 int64
-		if err := rows.Scan(&autoGen0); err != nil {
-			return nil, status.Errorf(codes.Internal, "scanning returning values: %v", err)
-		}
-
-		// Set auto-generated values on the entity.
-		entity.Id_3 = autoGen0
-	} else {
-		res, err := h.db.ExecContext(ctx, sqlStr, args...)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "executing insert: %v", err)
-		}
-
-		// Without RETURNING, recover auto-generated PK via LastInsertId.
-		if id, err := res.LastInsertId(); err == nil && id > 0 {
-			entity.Id_3 = id
-		}
+		return nil, status.Errorf(codes.Internal, "executing insert/select: %v", err)
 	}
-
+	// Set auto-generated values on the entity.
+	entity.Id_3 = autoGen0
+	entity.CommitTimestamp = timestamppb.New(autoGen1)
+	entity.DateOfBirth = &date.Date{Year: int32(autoGen2.Year()), Month: int32(autoGen2.Month()), Day: int32(autoGen2.Day())}
 	return entity, nil
+}
+
+// primaryKeyFilter builds a WHERE filter matching all primary key fields.
+func (h *AutogenUserCreateHandler) primaryKeyFilter(entity *testdata.AutogenUser) *gocrudv1.Filter {
+	return &gocrudv1.Filter{
+		Filter: &gocrudv1.Filter_Composite{
+			Composite: &gocrudv1.CompositeFilter{
+				Op: gocrudv1.CompositeFilter_AND,
+				Filters: []*gocrudv1.Filter{
+					{
+						Filter: &gocrudv1.Filter_Condition{
+							Condition: &gocrudv1.Condition{
+								Column:  "id_1",
+								Op:      gocrudv1.Operator_EQUAL,
+								Operand: &gocrudv1.Condition_Value{Value: stringValue(entity.GetId_1())},
+							},
+						},
+					},
+					{
+						Filter: &gocrudv1.Filter_Condition{
+							Condition: &gocrudv1.Condition{
+								Column:  "id_2",
+								Op:      gocrudv1.Operator_EQUAL,
+								Operand: &gocrudv1.Condition_Value{Value: intValue(entity.GetId_2())},
+							},
+						},
+					},
+					{
+						Filter: &gocrudv1.Filter_Condition{
+							Condition: &gocrudv1.Condition{
+								Column:  "id_3",
+								Op:      gocrudv1.Operator_EQUAL,
+								Operand: &gocrudv1.Condition_Value{Value: intValue(entity.GetId_3())},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 }
