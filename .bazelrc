@@ -1,6 +1,3 @@
-# Enable Bzlmod (required for MODULE.bazel)
-common --enable_bzlmod
-
 # Use Go toolchain from rules_go
 build --@rules_go//go/config:pure=false
 
