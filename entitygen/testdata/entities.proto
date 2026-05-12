@@ -150,3 +150,14 @@ message AuditLog {
     (gocrud.entity.auto_generated) = true
   ];
 }
+
+// Checkpoint has a composite PK where one part is a Timestamp, exercising
+// RFC-3339 parsing in the Get handler.
+message Checkpoint {
+  option (gocrud.entity.entity) = true;
+  option (gocrud.entity.methods) = GET;
+
+  string job_id = 1 [(gocrud.entity.primary_key) = 1];
+  google.protobuf.Timestamp checkpoint_at = 2 [(gocrud.entity.primary_key) = 2];
+  string label = 3;
+}

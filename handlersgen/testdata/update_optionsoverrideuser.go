@@ -12,26 +12,26 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// RealUserUpdateHandler handles Update requests for RealUser entities.
-type RealUserUpdateHandler struct {
+// OptionsOverrideUserUpdateHandler handles Update requests for OptionsOverrideUser entities.
+type OptionsOverrideUserUpdateHandler struct {
 	db      DBExecutor
 	dialect sqldialect.Builder
 }
 
-// NewRealUserUpdateHandler creates a new handler for updating RealUser entities.
-func NewRealUserUpdateHandler(db DBExecutor, backend sqldialect.BackendType) (*RealUserUpdateHandler, error) {
+// NewOptionsOverrideUserUpdateHandler creates a new handler for updating OptionsOverrideUser entities.
+func NewOptionsOverrideUserUpdateHandler(db DBExecutor, backend sqldialect.BackendType) (*OptionsOverrideUserUpdateHandler, error) {
 	b, err := sqldialect.ForBackend(backend)
 	if err != nil {
 		return nil, err
 	}
-	return &RealUserUpdateHandler{db: db, dialect: b}, nil
+	return &OptionsOverrideUserUpdateHandler{db: db, dialect: b}, nil
 }
 
-// Update handles an UpdateRealUserRequest and returns the updated RealUser.
-func (h *RealUserUpdateHandler) Update(ctx context.Context, req *testdata.UpdateRealUserRequest) (*testdata.RealUser, error) {
-	entity := req.GetRealUser()
+// Update handles an UpdateOptionsOverrideUserRequest and returns the updated OptionsOverrideUser.
+func (h *OptionsOverrideUserUpdateHandler) Update(ctx context.Context, req *testdata.UpdateOptionsOverrideUserRequest) (*testdata.OptionsOverrideUser, error) {
+	entity := req.GetOptionsOverrideUser()
 	if entity == nil {
-		return nil, status.Errorf(codes.InvalidArgument, "missing RealUser in request")
+		return nil, status.Errorf(codes.InvalidArgument, "missing OptionsOverrideUser in request")
 	}
 
 	if err := h.validateKeys(entity); err != nil {
@@ -62,12 +62,11 @@ func (h *RealUserUpdateHandler) Update(ctx context.Context, req *testdata.Update
 		}
 	}
 
-	var scan0 string
 	err = execAndScan(ctx, h.db, h.dialect.SupportsReturning(),
 		sqlStr, args,
 		selSql, selArgs,
 		func(row RowScanner) error {
-			return row.Scan(&scan0)
+			return row.Scan()
 		},
 	)
 	if err != nil {
@@ -77,19 +76,18 @@ func (h *RealUserUpdateHandler) Update(ctx context.Context, req *testdata.Update
 		return nil, status.Errorf(codes.Internal, "executing update: %v", err)
 	}
 
-	entity.Email = scan0
 	return entity, nil
 }
 
 // buildUpdateSQL builds the UPDATE query, including RETURNING for all non-PK fields
 // when the dialect supports it.
-func (h *RealUserUpdateHandler) buildUpdateSQL(entity *testdata.RealUser, updates []*gocrudv1.ColumnUpdate) (string, []any, error) {
+func (h *OptionsOverrideUserUpdateHandler) buildUpdateSQL(entity *testdata.OptionsOverrideUser, updates []*gocrudv1.ColumnUpdate) (string, []any, error) {
 	filter := h.primaryKeyFilter(entity)
 	var returningCols []string
 	if h.dialect.SupportsReturning() {
-		returningCols = []string{"email"}
+		returningCols = []string{}
 	}
-	q := sqldialect.NewUpdateQuery("real_user", updates, filter, returningCols)
+	q := sqldialect.NewUpdateQuery("options_override_user", updates, filter, returningCols)
 	sqlStr, args, err := h.dialect.BuildUpdate(q)
 	if err != nil {
 		return "", nil, status.Errorf(codes.Internal, "building update SQL: %v", err)
@@ -98,10 +96,10 @@ func (h *RealUserUpdateHandler) buildUpdateSQL(entity *testdata.RealUser, update
 }
 
 // buildSelectSQL builds a SELECT query to re-read all non-PK fields after a non-RETURNING update.
-func (h *RealUserUpdateHandler) buildSelectSQL(entity *testdata.RealUser) (string, []any, error) {
+func (h *OptionsOverrideUserUpdateHandler) buildSelectSQL(entity *testdata.OptionsOverrideUser) (string, []any, error) {
 	filter := h.primaryKeyFilter(entity)
-	selectCols := []string{"email"}
-	selQ := sqldialect.NewSelectQuery("real_user", selectCols, filter, nil, 1, 0, false)
+	selectCols := []string{}
+	selQ := sqldialect.NewSelectQuery("options_override_user", selectCols, filter, nil, 1, 0, false)
 	sqlStr, args, err := h.dialect.BuildSelect(selQ)
 	if err != nil {
 		return "", nil, status.Errorf(codes.Internal, "building select SQL: %v", err)
@@ -110,7 +108,10 @@ func (h *RealUserUpdateHandler) buildSelectSQL(entity *testdata.RealUser) (strin
 }
 
 // validateKeys checks that all primary key fields are populated on the entity.
-func (h *RealUserUpdateHandler) validateKeys(entity *testdata.RealUser) error {
+func (h *OptionsOverrideUserUpdateHandler) validateKeys(entity *testdata.OptionsOverrideUser) error {
+	if entity.GetAccountId() == "" {
+		return status.Errorf(codes.InvalidArgument, "missing required primary key field: account_id")
+	}
 	if entity.GetId() == "" {
 		return status.Errorf(codes.InvalidArgument, "missing required primary key field: id")
 	}
@@ -121,7 +122,7 @@ func (h *RealUserUpdateHandler) validateKeys(entity *testdata.RealUser) error {
 // An empty or wildcard-only ("*") mask returns nil (meaning update all fields).
 // A wildcard combined with other paths is rejected.
 // Primary key fields and unknown fields are rejected.
-func (h *RealUserUpdateHandler) validateMask(paths []string) ([]string, error) {
+func (h *OptionsOverrideUserUpdateHandler) validateMask(paths []string) ([]string, error) {
 	if len(paths) == 0 {
 		return nil, nil
 	}
@@ -140,11 +141,12 @@ func (h *RealUserUpdateHandler) validateMask(paths []string) ([]string, error) {
 		return nil, nil
 	}
 
-	allowedFields := map[string]bool{
-		"email": true,
-	}
+	allowedFields := map[string]bool{}
 	for _, p := range paths {
 		if !allowedFields[p] {
+			if p == "account_id" {
+				return nil, status.Errorf(codes.InvalidArgument, "primary key field %q cannot be in update_mask", p)
+			}
 			if p == "id" {
 				return nil, status.Errorf(codes.InvalidArgument, "primary key field %q cannot be in update_mask", p)
 			}
@@ -156,32 +158,37 @@ func (h *RealUserUpdateHandler) validateMask(paths []string) ([]string, error) {
 
 // buildColumnUpdates builds the list of column updates from the entity.
 // If mask is nil, all updatable fields are included.
-func (h *RealUserUpdateHandler) buildColumnUpdates(entity *testdata.RealUser, mask []string) []*gocrudv1.ColumnUpdate {
-	updateAll := len(mask) == 0
-	maskSet := make(map[string]bool, len(mask))
-	for _, p := range mask {
-		maskSet[p] = true
-	}
+func (h *OptionsOverrideUserUpdateHandler) buildColumnUpdates(entity *testdata.OptionsOverrideUser, mask []string) []*gocrudv1.ColumnUpdate {
 	var updates []*gocrudv1.ColumnUpdate
-	if updateAll || maskSet["email"] {
-		updates = append(updates, &gocrudv1.ColumnUpdate{
-			Column: "email",
-			Assignment: &gocrudv1.ColumnUpdate_Value{
-				Value: stringValue(entity.GetEmail()),
-			},
-		})
-	}
 	return updates
 }
 
 // primaryKeyFilter builds a WHERE filter matching all primary key fields.
-func (h *RealUserUpdateHandler) primaryKeyFilter(entity *testdata.RealUser) *gocrudv1.Filter {
+func (h *OptionsOverrideUserUpdateHandler) primaryKeyFilter(entity *testdata.OptionsOverrideUser) *gocrudv1.Filter {
 	return &gocrudv1.Filter{
-		Filter: &gocrudv1.Filter_Condition{
-			Condition: &gocrudv1.Condition{
-				Column:  "id",
-				Op:      gocrudv1.Operator_EQUAL,
-				Operand: &gocrudv1.Condition_Value{Value: stringValue(entity.GetId())},
+		Filter: &gocrudv1.Filter_Composite{
+			Composite: &gocrudv1.CompositeFilter{
+				Op: gocrudv1.CompositeFilter_AND,
+				Filters: []*gocrudv1.Filter{
+					{
+						Filter: &gocrudv1.Filter_Condition{
+							Condition: &gocrudv1.Condition{
+								Column:  "account_id",
+								Op:      gocrudv1.Operator_EQUAL,
+								Operand: &gocrudv1.Condition_Value{Value: stringValue(entity.GetAccountId())},
+							},
+						},
+					},
+					{
+						Filter: &gocrudv1.Filter_Condition{
+							Condition: &gocrudv1.Condition{
+								Column:  "id",
+								Op:      gocrudv1.Operator_EQUAL,
+								Operand: &gocrudv1.Condition_Value{Value: stringValue(entity.GetId())},
+							},
+						},
+					},
+				},
 			},
 		},
 	}

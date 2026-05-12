@@ -183,7 +183,6 @@ func (h *AutogenUserUpdateHandler) buildColumnUpdates(entity *testdata.AutogenUs
 	for _, p := range mask {
 		maskSet[p] = true
 	}
-
 	var updates []*gocrudv1.ColumnUpdate
 	if updateAll || maskSet["email"] {
 		updates = append(updates, &gocrudv1.ColumnUpdate{

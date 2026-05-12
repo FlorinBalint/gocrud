@@ -180,7 +180,6 @@ func (h *ProductUpdateHandler) buildColumnUpdates(entity *testdata.Product, mask
 	for _, p := range mask {
 		maskSet[p] = true
 	}
-
 	var updates []*gocrudv1.ColumnUpdate
 	if updateAll || maskSet["name"] {
 		updates = append(updates, &gocrudv1.ColumnUpdate{

@@ -16,6 +16,9 @@ var createTemplateContent string
 //go:embed templates/update.go.tmpl
 var updateTemplateContent string
 
+//go:embed templates/get.go.tmpl
+var getTemplateContent string
+
 func setFromScanVarfunc(goType, goName string, idx int, prefix string) string {
 		varName := fmt.Sprintf("%s%d", prefix, idx)
 		switch goType {
@@ -115,14 +118,164 @@ func pkFilter(keys []fieldInfo) string {
 		"\t}"
 }
 
+// parsePKFromStr generates inline Go source that parses a primary key field
+// from the URL path segment at segIdx. The generated code sets entity.<GoName>
+// from parts[segIdx], performing type conversion as needed.
+func parsePKFromStr(f fieldInfo, segIdx int) string {
+	seg := fmt.Sprintf("parts[%d]", segIdx)
+	switch f.GoType {
+	case "string":
+		return fmt.Sprintf(
+			"if %s == \"\" {\n"+
+				"\t\treturn nil, status.Errorf(codes.InvalidArgument, \"missing %s in resource name: %%q\", name)\n"+
+				"\t}\n"+
+				"\tentity.%s = %s",
+			seg, f.ProtoName, f.GoName, seg,
+		)
+	case "int64":
+		return fmt.Sprintf(
+			"{\n"+
+				"\t\tv, err := strconv.ParseInt(%s, 10, 64)\n"+
+				"\t\tif err != nil {\n"+
+				"\t\t\treturn nil, status.Errorf(codes.InvalidArgument, \"invalid %s in resource name: %%v\", err)\n"+
+				"\t\t}\n"+
+				"\t\tentity.%s = v\n"+
+				"\t}",
+			seg, f.ProtoName, f.GoName,
+		)
+	case "int32":
+		return fmt.Sprintf(
+			"{\n"+
+				"\t\tv, err := strconv.ParseInt(%s, 10, 32)\n"+
+				"\t\tif err != nil {\n"+
+				"\t\t\treturn nil, status.Errorf(codes.InvalidArgument, \"invalid %s in resource name: %%v\", err)\n"+
+				"\t\t}\n"+
+				"\t\tentity.%s = int32(v)\n"+
+				"\t}",
+			seg, f.ProtoName, f.GoName,
+		)
+	case "uint64":
+		return fmt.Sprintf(
+			"{\n"+
+				"\t\tv, err := strconv.ParseUint(%s, 10, 64)\n"+
+				"\t\tif err != nil {\n"+
+				"\t\t\treturn nil, status.Errorf(codes.InvalidArgument, \"invalid %s in resource name: %%v\", err)\n"+
+				"\t\t}\n"+
+				"\t\tentity.%s = v\n"+
+				"\t}",
+			seg, f.ProtoName, f.GoName,
+		)
+	case "uint32":
+		return fmt.Sprintf(
+			"{\n"+
+				"\t\tv, err := strconv.ParseUint(%s, 10, 32)\n"+
+				"\t\tif err != nil {\n"+
+				"\t\t\treturn nil, status.Errorf(codes.InvalidArgument, \"invalid %s in resource name: %%v\", err)\n"+
+				"\t\t}\n"+
+				"\t\tentity.%s = uint32(v)\n"+
+				"\t}",
+			seg, f.ProtoName, f.GoName,
+		)
+	case "float64":
+		return fmt.Sprintf(
+			"{\n"+
+				"\t\tv, err := strconv.ParseFloat(%s, 64)\n"+
+				"\t\tif err != nil {\n"+
+				"\t\t\treturn nil, status.Errorf(codes.InvalidArgument, \"invalid %s in resource name: %%v\", err)\n"+
+				"\t\t}\n"+
+				"\t\tentity.%s = v\n"+
+				"\t}",
+			seg, f.ProtoName, f.GoName,
+		)
+	case "float32":
+		return fmt.Sprintf(
+			"{\n"+
+				"\t\tv, err := strconv.ParseFloat(%s, 32)\n"+
+				"\t\tif err != nil {\n"+
+				"\t\t\treturn nil, status.Errorf(codes.InvalidArgument, \"invalid %s in resource name: %%v\", err)\n"+
+				"\t\t}\n"+
+				"\t\tentity.%s = float32(v)\n"+
+				"\t}",
+			seg, f.ProtoName, f.GoName,
+		)
+	case "bool":
+		return fmt.Sprintf(
+			"{\n"+
+				"\t\tv, err := strconv.ParseBool(%s)\n"+
+				"\t\tif err != nil {\n"+
+				"\t\t\treturn nil, status.Errorf(codes.InvalidArgument, \"invalid %s in resource name: %%v\", err)\n"+
+				"\t\t}\n"+
+				"\t\tentity.%s = v\n"+
+				"\t}",
+			seg, f.ProtoName, f.GoName,
+		)
+	case "timestamp":
+		return fmt.Sprintf(
+			"{\n"+
+				"\t\tt, err := time.Parse(time.RFC3339Nano, %s)\n"+
+				"\t\tif err != nil {\n"+
+				"\t\t\treturn nil, status.Errorf(codes.InvalidArgument, \"invalid %s in resource name: %%v\", err)\n"+
+				"\t\t}\n"+
+				"\t\tentity.%s = timestamppb.New(t)\n"+
+				"\t}",
+			seg, f.ProtoName, f.GoName,
+		)
+	case "date":
+		return fmt.Sprintf(
+			"{\n"+
+				"\t\tt, err := time.Parse(\"2006-01-02\", %s)\n"+
+				"\t\tif err != nil {\n"+
+				"\t\t\treturn nil, status.Errorf(codes.InvalidArgument, \"invalid %s in resource name: %%v\", err)\n"+
+				"\t\t}\n"+
+				"\t\tentity.%s = &date.Date{Year: int32(t.Year()), Month: int32(t.Month()), Day: int32(t.Day())}\n"+
+				"\t}",
+			seg, f.ProtoName, f.GoName,
+		)
+	case "duration":
+		return fmt.Sprintf(
+			"{\n"+
+				"\t\td, err := time.ParseDuration(%s)\n"+
+				"\t\tif err != nil {\n"+
+				"\t\t\treturn nil, status.Errorf(codes.InvalidArgument, \"invalid %s in resource name: %%v\", err)\n"+
+				"\t\t}\n"+
+				"\t\tentity.%s = durationpb.New(d)\n"+
+				"\t}",
+			seg, f.ProtoName, f.GoName,
+		)
+	case "decimal":
+		return fmt.Sprintf(
+			"if %s == \"\" {\n"+
+				"\t\treturn nil, status.Errorf(codes.InvalidArgument, \"missing %s in resource name: %%q\", name)\n"+
+				"\t}\n"+
+				"\tentity.%s = &decimal.Decimal{Value: %s}",
+			seg, f.ProtoName, f.GoName, seg,
+		)
+	case "timeofday":
+		return fmt.Sprintf(
+			"{\n"+
+				"\t\tt, err := time.Parse(\"15:04:05.999999999\", %s)\n"+
+				"\t\tif err != nil {\n"+
+				"\t\t\treturn nil, status.Errorf(codes.InvalidArgument, \"invalid %s in resource name: %%v\", err)\n"+
+				"\t\t}\n"+
+				"\t\tentity.%s = &timeofday.TimeOfDay{Hours: int32(t.Hour()), Minutes: int32(t.Minute()), Seconds: int32(t.Second()), Nanos: int32(t.Nanosecond())}\n"+
+				"\t}",
+			seg, f.ProtoName, f.GoName,
+		)
+	default:
+		return fmt.Sprintf("// unsupported PK type %q for field %s", f.GoType, f.ProtoName)
+	}
+}
+
 var handlersFuncMap = template.FuncMap{
 	"sub":            func(a, b int) int { return a - b },
 	"zeroLiteral":    zeroLiteral,
 	"setFromScanVar": setFromScanVarfunc,
 	"castFromInt64":  castFromInt64,
 	"pkFilter":       pkFilter,
+	"parsePKFromStr": parsePKFromStr,
 }
 
 var typesTmpl = template.Must(template.New("types").Parse(typesTemplateContent))
 var createTmpl = template.Must(template.New("create").Funcs(handlersFuncMap).Parse(createTemplateContent))
 var updateTmpl = template.Must(template.New("update").Funcs(handlersFuncMap).Parse(updateTemplateContent))
+var getTmpl = template.Must(template.New("get").Funcs(handlersFuncMap).Parse(getTemplateContent))

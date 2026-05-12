@@ -14,9 +14,104 @@ func readGolden(t *testing.T, name string) string {
 	t.Helper()
 	data, err := os.ReadFile(filepath.Join("testdata", name))
 	if err != nil {
+		if os.IsNotExist(err) && os.Getenv("UPDATE_GOLDEN") == "1" {
+			return "" // golden will be written by the caller
+		}
 		t.Fatalf("reading golden file: %v", err)
 	}
 	return string(data)
+}
+
+func TestParseResourcePathPKSegments(t *testing.T) {
+	sk := func(name string) fieldInfo { return fieldInfo{ProtoName: name, GoType: "string"} }
+
+	tests := []struct {
+		name        string
+		path        string
+		keys        []fieldInfo
+		wantErr     bool
+		wantNum     int
+		wantIndices []int // expected SegmentIdx for each key in input order
+	}{
+		{
+			name:        "single PK with =* syntax",
+			path:        "/v1/users/{id=*}",
+			keys:        []fieldInfo{sk("id")},
+			wantNum:     3,
+			wantIndices: []int{2},
+		},
+		{
+			name:        "single PK without =* suffix",
+			path:        "/api/v2/accounts/{account_id}",
+			keys:        []fieldInfo{sk("account_id")},
+			wantNum:     4,
+			wantIndices: []int{3},
+		},
+		{
+			name:        "composite PKs at non-contiguous segments",
+			path:        "/api/v2/accounts/{account_id}/custom_users/{id}",
+			keys:        []fieldInfo{sk("account_id"), sk("id")},
+			wantNum:     6,
+			wantIndices: []int{3, 5},
+		},
+		{
+			name:        "composite PKs contiguous with mixed syntax",
+			path:        "/testdata/v1/checkpoints/{job_id=*}/{checkpoint_at=*}",
+			keys:        []fieldInfo{sk("job_id"), sk("checkpoint_at")},
+			wantNum:     5,
+			wantIndices: []int{3, 4},
+		},
+		{
+			name:    "one PK present but second missing",
+			path:    "/v1/accounts/{account_id}/users",
+			keys:    []fieldInfo{sk("account_id"), sk("user_id")},
+			wantErr: true,
+		},
+		{
+			name:    "no variable segments at all",
+			path:    "/v1/users/static",
+			keys:    []fieldInfo{sk("id")},
+			wantErr: true,
+		},
+		{
+			name:        "empty key list always succeeds",
+			path:        "/v1/users",
+			keys:        nil,
+			wantNum:     2,
+			wantIndices: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			segs, num, err := parseResourcePathPKSegments(tt.path, tt.keys)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil (segs=%v)", segs)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if num != tt.wantNum {
+				t.Errorf("num segments = %d, want %d", num, tt.wantNum)
+			}
+			if len(segs) != len(tt.wantIndices) {
+				t.Fatalf("got %d segments, want %d", len(segs), len(tt.wantIndices))
+			}
+			for i, seg := range segs {
+				if seg.SegmentIdx != tt.wantIndices[i] {
+					t.Errorf("segs[%d].SegmentIdx = %d, want %d (field %q)",
+						i, seg.SegmentIdx, tt.wantIndices[i], seg.Field.ProtoName)
+				}
+				if seg.Field.ProtoName != tt.keys[i].ProtoName {
+					t.Errorf("segs[%d].Field.ProtoName = %q, want %q",
+						i, seg.Field.ProtoName, tt.keys[i].ProtoName)
+				}
+			}
+		})
+	}
 }
 
 func TestFieldGoName(t *testing.T) {
@@ -50,24 +145,44 @@ func TestGenerateHandlers_RealProto(t *testing.T) {
 			"types.go":           "types.go",
 			"create_realuser.go": "create_realuser.go",
 			"update_realuser.go": "update_realuser.go",
+			"get_realuser.go":    "get_realuser.go",
 		}},
 		{"AutogenUser", map[string]string{
 			"types.go":              "types.go",
 			"create_autogenuser.go": "create_autogenuser.go",
 			"update_autogenuser.go": "update_autogenuser.go",
+			"get_autogenuser.go":    "get_autogenuser.go",
 		}},
 		{"Event", map[string]string{
 			"types.go":        "types.go",
 			"create_event.go": "create_event.go",
 		}},
 		{"Product", map[string]string{
-			"types.go":           "types.go",
-			"create_product.go":  "create_product.go",
-			"update_product.go":  "update_product.go",
+			"types.go":          "types.go",
+			"create_product.go": "create_product.go",
+			"update_product.go": "update_product.go",
 		}},
 		{"AuditLog", map[string]string{
+			"types.go":           "types.go",
+			"create_auditlog.go": "create_auditlog.go",
+		}},
+		// GetOnlyUser: GET-only entity, single string PK, no non-PK fields.
+		{"GetOnlyUser", map[string]string{
 			"types.go":            "types.go",
-			"create_auditlog.go":  "create_auditlog.go",
+			"get_getonlyuser.go":  "get_getonlyuser.go",
+		}},
+		// OptionsOverrideUser: custom resource_path, composite string PKs, no non-PK fields.
+		{"OptionsOverrideUser", map[string]string{
+			"types.go":                      "types.go",
+			"create_optionsoverrideuser.go": "create_optionsoverrideuser.go",
+			"update_optionsoverrideuser.go": "update_optionsoverrideuser.go",
+			"get_optionsoverrideuser.go":    "get_optionsoverrideuser.go",
+		}},
+		// Checkpoint: GET-only entity with a composite PK where one part is a Timestamp.
+		// Exercises RFC-3339 parsing of a Timestamp key from the resource name.
+		{"Checkpoint", map[string]string{
+			"types.go":            "types.go",
+			"get_checkpoint.go":   "get_checkpoint.go",
 		}},
 	}
 
