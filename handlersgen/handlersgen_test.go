@@ -146,12 +146,14 @@ func TestGenerateHandlers_RealProto(t *testing.T) {
 			"create_realuser.go": "create_realuser.go",
 			"update_realuser.go": "update_realuser.go",
 			"get_realuser.go":    "get_realuser.go",
+			"delete_realuser.go": "delete_realuser.go",
 		}},
 		{"AutogenUser", map[string]string{
 			"types.go":              "types.go",
 			"create_autogenuser.go": "create_autogenuser.go",
 			"update_autogenuser.go": "update_autogenuser.go",
 			"get_autogenuser.go":    "get_autogenuser.go",
+			"delete_autogenuser.go": "delete_autogenuser.go",
 		}},
 		{"Event", map[string]string{
 			"types.go":        "types.go",
@@ -173,10 +175,21 @@ func TestGenerateHandlers_RealProto(t *testing.T) {
 		}},
 		// OptionsOverrideUser: custom resource_path, composite string PKs, no non-PK fields.
 		{"OptionsOverrideUser", map[string]string{
-			"types.go":                      "types.go",
-			"create_optionsoverrideuser.go": "create_optionsoverrideuser.go",
-			"update_optionsoverrideuser.go": "update_optionsoverrideuser.go",
-			"get_optionsoverrideuser.go":    "get_optionsoverrideuser.go",
+			"types.go":                         "types.go",
+			"create_optionsoverrideuser.go":    "create_optionsoverrideuser.go",
+			"update_optionsoverrideuser.go":    "update_optionsoverrideuser.go",
+			"get_optionsoverrideuser.go":       "get_optionsoverrideuser.go",
+			"delete_optionsoverrideuser.go":    "delete_optionsoverrideuser.go",
+		}},
+		// DeleteOnlyUser: DELETE-only entity, single string PK.
+		{"DeleteOnlyUser", map[string]string{
+			"types.go":                  "types.go",
+			"delete_deleteonlyuser.go":  "delete_deleteonlyuser.go",
+		}},
+		// ListUpsertDeleteWithEtagUser: LIST+UPSERT+DELETE entity with etag.
+		{"ListUpsertDeleteWithEtagUser", map[string]string{
+			"types.go":                                       "types.go",
+			"delete_listupsertdeletewithetaguser.go":          "delete_listupsertdeletewithetaguser.go",
 		}},
 		// Checkpoint: GET-only entity with a composite PK where one part is a Timestamp.
 		// Exercises RFC-3339 parsing of a Timestamp key from the resource name.

@@ -140,6 +140,21 @@ type handlerData struct {
 	GetPKHasDecimal   bool
 	GetPKHasTimeOfDay bool
 
+	// DeleteResourcePath is the full URL pattern used to parse the name field in Delete requests.
+	DeleteResourcePath string
+	// DeletePKSegments describes how to extract each PK from the split URL path.
+	DeletePKSegments []pkPathSegment
+	// NumDeletePathSegments is the expected number of path segments in the name field.
+	NumDeletePathSegments int
+	// DeleteNeedsStrconv is true if any PK field requires strconv for parsing.
+	DeleteNeedsStrconv bool
+	// DeletePKHas* are WKT import flags for PK fields in the Delete handler.
+	DeletePKHasTimestamp bool
+	DeletePKHasDate      bool
+	DeletePKHasDuration  bool
+	DeletePKHasDecimal   bool
+	DeletePKHasTimeOfDay bool
+
 	// Methods lists the CRUD methods to generate handlers for.
 	Methods []entity.Method
 }
@@ -192,6 +207,12 @@ func GenerateHandlers(desc protoreflect.MessageDescriptor, entityImportPath stri
 
 	if data.HasMethod("GET") {
 		if err := populateGetMetadata(desc, &data); err != nil {
+			return nil, err
+		}
+	}
+
+	if data.HasMethod("DELETE") {
+		if err := populateDeleteMetadata(desc, &data); err != nil {
 			return nil, err
 		}
 	}
@@ -421,6 +442,37 @@ func populateGetMetadata(desc protoreflect.MessageDescriptor, data *handlerData)
 	return nil
 }
 
+// populateDeleteMetadata derives the URL resource path and PK segment positions
+// for the Delete handler, then sets all Delete-specific fields on data.
+func populateDeleteMetadata(desc protoreflect.MessageDescriptor, data *handlerData) error {
+	resPath, err := resourcePathForGet(desc, data.AllKeys)
+	if err != nil {
+		return err
+	}
+	pkSegs, numSeg, err := parseResourcePathPKSegments(resPath, data.AllKeys)
+	if err != nil {
+		return err
+	}
+	data.DeleteResourcePath = resPath
+	data.DeletePKSegments = pkSegs
+	data.NumDeletePathSegments = numSeg
+
+	pkFlags := computeWKTFlags(data.AllKeys)
+	data.DeletePKHasTimestamp = pkFlags.timestamp
+	data.DeletePKHasDate = pkFlags.date
+	data.DeletePKHasDuration = pkFlags.duration
+	data.DeletePKHasDecimal = pkFlags.decimal
+	data.DeletePKHasTimeOfDay = pkFlags.timeOfDay
+
+	for _, k := range data.AllKeys {
+		switch k.GoType {
+		case "int32", "int64", "uint32", "uint64", "float32", "float64", "bool":
+			data.DeleteNeedsStrconv = true
+		}
+	}
+	return nil
+}
+
 // renderHandlerFiles executes each enabled method's template and returns the
 // formatted Go source files.
 func renderHandlerFiles(data handlerData) ([]GeneratedFile, error) {
@@ -455,6 +507,14 @@ func renderHandlerFiles(data handlerData) ([]GeneratedFile, error) {
 			return nil, err
 		}
 		files = append(files, GeneratedFile{Filename: "get_" + entityLower + ".go", Content: content})
+	}
+
+	if data.HasMethod("DELETE") {
+		content, err := renderTemplate(deleteTmpl, data, "delete")
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, GeneratedFile{Filename: "delete_" + entityLower + ".go", Content: content})
 	}
 
 	return files, nil
