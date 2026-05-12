@@ -106,11 +106,8 @@ message DeleteAutogenUserRequest {
     (google.api.resource_reference).type = "custom.googleapis.com/CustomUser"
   ];
 
-  // If true, performs a cascading delete of the resource and all its children.
-  bool force_cascade = 2 [(google.api.field_behavior) = OPTIONAL];
-
   // If true, the request will succeed even if the resource does not exist.
-  bool allow_missing = 3;
+  bool allow_missing = 2;
 }
 
 // AutogenUserService provides CRUD operations for AutogenUser entities.

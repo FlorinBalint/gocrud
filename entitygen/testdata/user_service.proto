@@ -106,11 +106,8 @@ message DeleteUserRequest {
     (google.api.resource_reference).type = "mypackage.v1/User"
   ];
 
-  // If true, performs a cascading delete of the resource and all its children.
-  bool force_cascade = 2 [(google.api.field_behavior) = OPTIONAL];
-
   // If true, the request will succeed even if the resource does not exist.
-  bool allow_missing = 3;
+  bool allow_missing = 2;
 }
 
 // UserService provides CRUD operations for User entities.

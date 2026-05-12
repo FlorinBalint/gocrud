@@ -21,11 +21,8 @@ message DeleteDeleteOnlyUserRequest {
     (google.api.resource_reference).type = "testdata.v1/DeleteOnlyUser"
   ];
 
-  // If true, performs a cascading delete of the resource and all its children.
-  bool force_cascade = 2 [(google.api.field_behavior) = OPTIONAL];
-
   // If true, the request will succeed even if the resource does not exist.
-  bool allow_missing = 3;
+  bool allow_missing = 2;
 }
 
 // DeleteOnlyUserService provides CRUD operations for DeleteOnlyUser entities.

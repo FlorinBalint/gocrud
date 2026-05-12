@@ -140,19 +140,16 @@ message Delete{{.Name}}Request {
     (google.api.field_behavior) = REQUIRED,
     (google.api.resource_reference).type = "{{.ResourceType}}"
   ];
-
-  // If true, performs a cascading delete of the resource and all its children.
-  bool force_cascade = 2 [(google.api.field_behavior) = OPTIONAL];
 {{- if .HasEtag}}
 
   // The etag for concurrency control.
   // If provided, the delete will only succeed if the entity's current etag matches this value.
   // A wildcard * etag will match any tag.
-  string etag = 3;
+  string etag = 2;
 {{- end}}
 
   // If true, the request will succeed even if the resource does not exist.
-  bool allow_missing = {{if .HasEtag}}4{{else}}3{{end}};
+  bool allow_missing = {{if .HasEtag}}3{{else}}2{{end}};
 }
 {{end}}
 // {{.Name}}Service provides CRUD operations for {{.Name}} entities.

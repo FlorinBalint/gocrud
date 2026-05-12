@@ -72,16 +72,13 @@ message DeleteListUpsertDeleteWithEtagUserRequest {
     (google.api.resource_reference).type = "testdata.v1/ListUpsertDeleteWithEtagUser"
   ];
 
-  // If true, performs a cascading delete of the resource and all its children.
-  bool force_cascade = 2 [(google.api.field_behavior) = OPTIONAL];
-
   // The etag for concurrency control.
   // If provided, the delete will only succeed if the entity's current etag matches this value.
   // A wildcard * etag will match any tag.
-  string etag = 3;
+  string etag = 2;
 
   // If true, the request will succeed even if the resource does not exist.
-  bool allow_missing = 4;
+  bool allow_missing = 3;
 }
 
 // ListUpsertDeleteWithEtagUserService provides CRUD operations for ListUpsertDeleteWithEtagUser entities.
