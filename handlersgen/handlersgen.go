@@ -517,6 +517,14 @@ func renderHandlerFiles(data handlerData) ([]GeneratedFile, error) {
 		files = append(files, GeneratedFile{Filename: "delete_" + entityLower + ".go", Content: content})
 	}
 
+	if data.HasMethod("UPSERT") {
+		content, err := renderTemplate(upsertTmpl, data, "upsert")
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, GeneratedFile{Filename: "upsert_" + entityLower + ".go", Content: content})
+	}
+
 	return files, nil
 }
 

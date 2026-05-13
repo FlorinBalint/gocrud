@@ -19,6 +19,7 @@ proto_library(
         "list_upsert_delete_with_etag_service.proto",
         "options_override_service.proto",
         "realuser_service.proto",
+        "upsert_only_service.proto",
         "event_service.proto",
         "product_service.proto",
     ],
