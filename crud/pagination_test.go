@@ -146,7 +146,7 @@ func TestNextPageToken(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tok := nextPageToken(tc.currentOffset, tc.pageSize, tc.hasNext, hash)
+			tok := NextPageToken(tc.currentOffset, tc.pageSize, tc.hasNext, hash)
 			if tc.wantEmpty {
 				if tok != "" {
 					t.Errorf("expected empty token, got %q", tok)
@@ -209,7 +209,7 @@ func TestPrevPageToken(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			tok := prevPageToken(tc.currentOffset, tc.pageSize, hash)
+			tok := PrevPageToken(tc.currentOffset, tc.pageSize, hash)
 			if tc.wantEmpty {
 				if tok != "" {
 					t.Errorf("expected empty token, got %q", tok)
@@ -241,7 +241,7 @@ func TestQueryHash(t *testing.T) {
 		{
 			name: "nil filter no order_by produces non-empty hash",
 			run: func(t *testing.T) {
-				h, err := queryHash(nil, nil)
+				h, err := QueryHash(nil, nil)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -253,11 +253,11 @@ func TestQueryHash(t *testing.T) {
 		{
 			name: "hash is deterministic",
 			run: func(t *testing.T) {
-				h1, err := queryHash(filter, obs)
+				h1, err := QueryHash(filter, obs)
 				if err != nil {
 					t.Fatal(err)
 				}
-				h2, err := queryHash(filter, obs)
+				h2, err := QueryHash(filter, obs)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -274,8 +274,8 @@ func TestQueryHash(t *testing.T) {
 				f := andFilter(condFilter("name", gocrudv1.Operator_EQUAL, strVal("alice")))
 				ob := []*gocrudv1.OrderBy{orderBy("name", gocrudv1.OrderBy_ASC)}
 
-				h1, _ := queryHash(f, nil)
-				h2, _ := queryHash(nil, ob)
+				h1, _ := QueryHash(f, nil)
+				h2, _ := QueryHash(nil, ob)
 				if h1 == h2 {
 					t.Error("hash collision: filter-only and orderBy-only produced the same hash")
 				}
@@ -284,8 +284,8 @@ func TestQueryHash(t *testing.T) {
 		{
 			name: "different filters produce different hashes",
 			run: func(t *testing.T) {
-				h1, _ := queryHash(condFilter("age", gocrudv1.Operator_EQUAL, intVal(18)), nil)
-				h2, _ := queryHash(condFilter("age", gocrudv1.Operator_EQUAL, intVal(19)), nil)
+				h1, _ := QueryHash(condFilter("age", gocrudv1.Operator_EQUAL, intVal(18)), nil)
+				h2, _ := QueryHash(condFilter("age", gocrudv1.Operator_EQUAL, intVal(19)), nil)
 				if h1 == h2 {
 					t.Error("different filters produced same hash")
 				}
@@ -294,8 +294,8 @@ func TestQueryHash(t *testing.T) {
 		{
 			name: "different order_by produce different hashes",
 			run: func(t *testing.T) {
-				h1, _ := queryHash(nil, []*gocrudv1.OrderBy{orderBy("age", gocrudv1.OrderBy_ASC)})
-				h2, _ := queryHash(nil, []*gocrudv1.OrderBy{orderBy("age", gocrudv1.OrderBy_DESC)})
+				h1, _ := QueryHash(nil, []*gocrudv1.OrderBy{orderBy("age", gocrudv1.OrderBy_ASC)})
+				h2, _ := QueryHash(nil, []*gocrudv1.OrderBy{orderBy("age", gocrudv1.OrderBy_DESC)})
 				if h1 == h2 {
 					t.Error("different order_by produced same hash")
 				}
@@ -380,7 +380,7 @@ func TestResolvePageParams(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			offset, ps, err := resolvePageParams(tc.pagination, tc.hash, tc.cfg)
+			offset, ps, err := ResolvePageParams(tc.pagination, tc.hash, tc.cfg.DefaultPageSize, tc.cfg.MaxPageSize)
 			if tc.wantErr {
 				if err == nil {
 					t.Error("expected error, got nil")

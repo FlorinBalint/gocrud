@@ -145,12 +145,12 @@ func NewService[T any](db *sql.DB, cfg Config, scanner RowScanner[T]) (*Service[
 // request presents a token but has changed filter or order_by, List returns
 // codes.InvalidArgument — the result set would be inconsistent across pages.
 func (s *Service[T]) List(ctx context.Context, req *gocrudv1.ListRequest) (*ListResponse[T], error) {
-	qHash, err := queryHash(req.GetFilter(), req.GetOrderBy())
+	qHash, err := QueryHash(req.GetFilter(), req.GetOrderBy())
 	if err != nil {
 		return nil, fmt.Errorf("list: hashing request: %w", err)
 	}
 
-	offset, pageSize, err := resolvePageParams(req.GetPagination(), qHash, s.cfg)
+	offset, pageSize, err := ResolvePageParams(req.GetPagination(), qHash, s.cfg.DefaultPageSize, s.cfg.MaxPageSize)
 	if err != nil {
 		// All pagination resolution errors are caused by an invalid or
 		// mismatched page token, which is caller error.
@@ -225,8 +225,8 @@ func (s *Service[T]) List(ctx context.Context, req *gocrudv1.ListRequest) (*List
 
 	return &ListResponse[T]{
 		Items:         items,
-		NextPageToken: nextPageToken(offset, pageSize, hasNext, qHash),
-		PrevPageToken: prevPageToken(offset, pageSize, qHash),
+		NextPageToken: NextPageToken(offset, pageSize, hasNext, qHash),
+		PrevPageToken: PrevPageToken(offset, pageSize, qHash),
 		TotalSize:     totalSize,
 	}, nil
 }

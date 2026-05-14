@@ -25,6 +25,9 @@ var deleteTemplateContent string
 //go:embed templates/upsert.go.tmpl
 var upsertTemplateContent string
 
+//go:embed templates/list.go.tmpl
+var listTemplateContent string
+
 func setFromScanVarfunc(goType, goName string, idx int, prefix string) string {
 		varName := fmt.Sprintf("%s%d", prefix, idx)
 		switch goType {
@@ -287,3 +290,4 @@ var updateTmpl = template.Must(template.New("update").Funcs(handlersFuncMap).Par
 var getTmpl = template.Must(template.New("get").Funcs(handlersFuncMap).Parse(getTemplateContent))
 var deleteTmpl = template.Must(template.New("delete").Funcs(handlersFuncMap).Parse(deleteTemplateContent))
 var upsertTmpl = template.Must(template.New("upsert").Funcs(handlersFuncMap).Parse(upsertTemplateContent))
+var listTmpl = template.Must(template.New("list").Funcs(handlersFuncMap).Parse(listTemplateContent))

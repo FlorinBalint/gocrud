@@ -25,7 +25,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-const defaultPageSize int32 = 50
+// DefaultPageSize is the number of rows returned when no page size is specified.
+const DefaultPageSize = 50
 
 // offsetToken is the internal page position encoded into an opaque page token.
 // JSON field names are intentionally short to keep tokens compact.
@@ -56,7 +57,7 @@ func decodeToken(s string) (offsetToken, error) {
 	return t, nil
 }
 
-// queryHash returns a hex fingerprint of the filter and order_by fields using
+// QueryHash returns a hex fingerprint of the filter and order_by fields using
 // FNV-1a 64-bit — fast, non-cryptographic, and sufficient for detecting
 // accidental query changes between paginated requests.
 //
@@ -67,7 +68,7 @@ func decodeToken(s string) (offsetToken, error) {
 //
 // The separator prevents collisions between (filter=nil, orderBy=[X]) and
 // (filter=X_bytes, orderBy=[]).
-func queryHash(filter *gocrudv1.Filter, orderBy []*gocrudv1.OrderBy) (string, error) {
+func QueryHash(filter *gocrudv1.Filter, orderBy []*gocrudv1.OrderBy) (string, error) {
 	opts := proto.MarshalOptions{Deterministic: true}
 	h := fnv.New64a()
 
@@ -92,13 +93,16 @@ func queryHash(filter *gocrudv1.Filter, orderBy []*gocrudv1.OrderBy) (string, er
 	return hex.EncodeToString(h.Sum(nil)), nil // 16 hex chars (8 bytes)
 }
 
-// resolvePageParams extracts the effective offset and page size from the proto
+// ResolvePageParams extracts the effective offset and page size from the proto
 // Pagination message and validates that the query fingerprint in the token
 // matches the current request's filter and order_by.
-func resolvePageParams(p *gocrudv1.Pagination, currentQueryHash string, cfg Config) (offset int64, pageSize int32, err error) {
-	pageSize = defaultPageSize
-	if cfg.DefaultPageSize > 0 {
-		pageSize = cfg.DefaultPageSize
+//
+// defaultPS overrides the package default (50) when > 0.
+// maxPS caps the caller-requested page size when > 0.
+func ResolvePageParams(p *gocrudv1.Pagination, currentQueryHash string, defaultPS, maxPS int32) (offset int64, pageSize int32, err error) {
+	pageSize = DefaultPageSize
+	if defaultPS > 0 {
+		pageSize = defaultPS
 	}
 
 	if p == nil {
@@ -107,8 +111,8 @@ func resolvePageParams(p *gocrudv1.Pagination, currentQueryHash string, cfg Conf
 
 	if p.GetPageSize() > 0 {
 		ps := p.GetPageSize()
-		if cfg.MaxPageSize > 0 && ps > cfg.MaxPageSize {
-			ps = cfg.MaxPageSize
+		if maxPS > 0 && ps > maxPS {
+			ps = maxPS
 		}
 		pageSize = ps
 	}
@@ -127,9 +131,9 @@ func resolvePageParams(p *gocrudv1.Pagination, currentQueryHash string, cfg Conf
 	return offset, pageSize, nil
 }
 
-// nextPageToken returns the token for the next page, or "" if there is none.
+// NextPageToken returns the token for the next page, or "" if there is none.
 // hasNext is true when the query returned pageSize+1 rows (n+1 trick).
-func nextPageToken(currentOffset int64, pageSize int32, hasNext bool, qHash string) string {
+func NextPageToken(currentOffset int64, pageSize int32, hasNext bool, qHash string) string {
 	if !hasNext {
 		return ""
 	}
@@ -139,8 +143,8 @@ func nextPageToken(currentOffset int64, pageSize int32, hasNext bool, qHash stri
 	})
 }
 
-// prevPageToken returns the token for the previous page, or "" on the first page.
-func prevPageToken(currentOffset int64, pageSize int32, qHash string) string {
+// PrevPageToken returns the token for the previous page, or "" on the first page.
+func PrevPageToken(currentOffset int64, pageSize int32, qHash string) string {
 	if currentOffset <= 0 {
 		return ""
 	}

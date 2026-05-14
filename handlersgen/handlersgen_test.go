@@ -148,6 +148,7 @@ func TestGenerateHandlers_RealProto(t *testing.T) {
 			"get_realuser.go":    "get_realuser.go",
 			"delete_realuser.go": "delete_realuser.go",
 			"upsert_realuser.go": "upsert_realuser.go",
+			"list_realuser.go":   "list_realuser.go",
 		}},
 		{"AutogenUser", map[string]string{
 			"types.go":              "types.go",
@@ -156,6 +157,7 @@ func TestGenerateHandlers_RealProto(t *testing.T) {
 			"get_autogenuser.go":    "get_autogenuser.go",
 			"delete_autogenuser.go": "delete_autogenuser.go",
 			"upsert_autogenuser.go": "upsert_autogenuser.go",
+			"list_autogenuser.go":   "list_autogenuser.go",
 		}},
 		{"Event", map[string]string{
 			"types.go":        "types.go",
@@ -183,11 +185,17 @@ func TestGenerateHandlers_RealProto(t *testing.T) {
 			"get_optionsoverrideuser.go":       "get_optionsoverrideuser.go",
 			"delete_optionsoverrideuser.go":    "delete_optionsoverrideuser.go",
 			"upsert_optionsoverrideuser.go":    "upsert_optionsoverrideuser.go",
+			"list_optionsoverrideuser.go":      "list_optionsoverrideuser.go",
 		}},
 		// DeleteOnlyUser: DELETE-only entity, single string PK.
 		{"DeleteOnlyUser", map[string]string{
 			"types.go":                  "types.go",
 			"delete_deleteonlyuser.go":  "delete_deleteonlyuser.go",
+		}},
+		// ListOnlyUser: LIST-only entity, single string PK.
+		{"ListOnlyUser", map[string]string{
+			"types.go":               "types.go",
+			"list_listonlyuser.go":   "list_listonlyuser.go",
 		}},
 		// UpsertOnlyUser: UPSERT-only entity, single string PK.
 		{"UpsertOnlyUser", map[string]string{
@@ -197,6 +205,7 @@ func TestGenerateHandlers_RealProto(t *testing.T) {
 		// ListUpsertDeleteWithEtagUser: LIST+UPSERT+DELETE entity with etag.
 		{"ListUpsertDeleteWithEtagUser", map[string]string{
 			"types.go":                                                "types.go",
+			"list_listupsertdeletewithetaguser.go":                     "list_listupsertdeletewithetaguser.go",
 			"delete_listupsertdeletewithetaguser.go":                   "delete_listupsertdeletewithetaguser.go",
 			"upsert_listupsertdeletewithetaguser.go":                   "upsert_listupsertdeletewithetaguser.go",
 		}},

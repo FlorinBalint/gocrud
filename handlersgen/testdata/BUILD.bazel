@@ -12,6 +12,7 @@ go_library(
     importpath = "github.com/FlorinBalint/gocrud/handlersgen/testdata",
     visibility = ["//visibility:public"],
     deps = [
+        "//crud",
         "//entitygen/testdata:testdata_go_proto",
         "//proto/v1:query_go_proto",
         "//sqldialect",

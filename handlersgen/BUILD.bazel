@@ -13,6 +13,7 @@ go_library(
         "templates/get.go.tmpl",
         "templates/delete.go.tmpl",
         "templates/upsert.go.tmpl",
+        "templates/list.go.tmpl",
     ],
     importpath = "github.com/FlorinBalint/gocrud/handlersgen",
     visibility = ["//visibility:public"],

@@ -123,6 +123,18 @@ type handlerData struct {
 	UpdateHasDecimal   bool
 	UpdateHasTimeOfDay bool
 
+	// ListHas* are WKT import flags for all fields (needed for scanning in list).
+	ListHasTimestamp bool
+	ListHasDate      bool
+	ListHasDuration  bool
+	ListHasDecimal   bool
+	ListHasTimeOfDay bool
+
+	// EntityPluralGoName is the PascalCase plural of the entity snake name,
+	// matching the repeated field name in the List response proto
+	// (e.g. "RealUsers" for entity "RealUser").
+	EntityPluralGoName string
+
 	// GetResourcePath is the full URL pattern used to parse the name field in Get requests
 	// (e.g. "/testdata/v1/real_users/{id=*}").
 	GetResourcePath string
@@ -286,6 +298,7 @@ func buildHandlerData(desc protoreflect.MessageDescriptor, importPath, importAli
 
 	autoGenFlags := computeWKTFlags(nonPKAutoGenFields)
 	nonPKFlags := computeWKTFlags(allNonPKFields)
+	allFieldsFlags := computeWKTFlags(allFields)
 
 	return handlerData{
 		EntityName:         name,
@@ -314,6 +327,12 @@ func buildHandlerData(desc protoreflect.MessageDescriptor, importPath, importAli
 		UpdateHasDuration:  nonPKFlags.duration,
 		UpdateHasDecimal:   nonPKFlags.decimal,
 		UpdateHasTimeOfDay: nonPKFlags.timeOfDay,
+		ListHasTimestamp:   allFieldsFlags.timestamp,
+		ListHasDate:        allFieldsFlags.date,
+		ListHasDuration:    allFieldsFlags.duration,
+		ListHasDecimal:     allFieldsFlags.decimal,
+		ListHasTimeOfDay:   allFieldsFlags.timeOfDay,
+		EntityPluralGoName: fieldGoName(snakeCase(name) + "s"),
 	}, nil
 }
 
@@ -523,6 +542,14 @@ func renderHandlerFiles(data handlerData) ([]GeneratedFile, error) {
 			return nil, err
 		}
 		files = append(files, GeneratedFile{Filename: "upsert_" + entityLower + ".go", Content: content})
+	}
+
+	if data.HasMethod("LIST") {
+		content, err := renderTemplate(listTmpl, data, "list")
+		if err != nil {
+			return nil, err
+		}
+		files = append(files, GeneratedFile{Filename: "list_" + entityLower + ".go", Content: content})
 	}
 
 	return files, nil
